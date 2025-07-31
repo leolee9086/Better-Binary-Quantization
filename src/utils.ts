@@ -6,7 +6,7 @@
 import { NUMERICAL_CONSTANTS } from './constants';
 
 // 位计数查找表 - 预计算所有256个字节值的位计数
-const BIT_COUNT_LOOKUP_TABLE: Uint8Array = new Uint8Array(256);
+export const BIT_COUNT_LOOKUP_TABLE: Uint8Array = new Uint8Array(256);
 for (let i = 0; i < 256; i++) {
   let count = 0;
   let temp = i;
@@ -108,7 +108,7 @@ export function bitCountBytes(bytes: Uint8Array): number {
   for (let i = 0; i < bytes.length; i++) {
     const val = bytes[i];
     if (val !== undefined) {
-      count += bitCount(val);
+      count += BIT_COUNT_LOOKUP_TABLE[val]!;
     }
   }
   return count;

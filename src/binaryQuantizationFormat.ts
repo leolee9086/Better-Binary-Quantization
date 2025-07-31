@@ -16,6 +16,7 @@ import { OptimizedScalarQuantizer } from './optimizedScalarQuantizer';
 import { BinaryQuantizedScorer } from './binaryQuantizedScorer';
 import { computeDotProduct, computeCentroid, normalizeVector } from './vectorOperations';
 import { VectorSimilarityFunction } from './types';
+import { MinHeap } from './minHeap';
 
 /**
  * 二值量化向量值实现
@@ -396,39 +397,35 @@ export class BinaryQuantizationFormat {
       }
     }
 
-    // 3. 使用快速选择算法找到前k个最大值
+    // 3. 使用最小堆找到前k个最大值
+    const minHeap = new MinHeap<{ score: number; index: number }>((a, b) => a.score - b.score);
     const k2 = Math.min(k, vectorCount);
-    for (let i = 0; i < k2; i++) {
-      let maxIdx = i;
-      for (let j = i + 1; j < vectorCount; j++) {
-        const idxJ = indices[j];
-        const idxMax = indices[maxIdx];
-        if (idxJ !== undefined && idxMax !== undefined && 
-            idxJ < scores.length && idxMax < scores.length && 
-            scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
-            scores[idxJ] > scores[idxMax]) {
-          maxIdx = j;
-        }
-      }
-      if (maxIdx !== i) {
-        const temp = indices[i];
-        const maxIdxValue = indices[maxIdx];
-        if (temp !== undefined && maxIdxValue !== undefined) {
-          indices[i] = maxIdxValue;
-          indices[maxIdx] = temp;
+
+    for (let i = 0; i < vectorCount; i++) {
+      const currentScore = scores[i];
+      if (currentScore !== undefined) {
+        if (minHeap.size() < k2) { // 注意这里使用k2
+          minHeap.push({ score: currentScore, index: indices[i]! });
+        } else {
+          const peek = minHeap.peek();
+          if (peek && currentScore > peek.score) {
+            minHeap.pop();
+            minHeap.push({ score: currentScore, index: indices[i]! });
+          }
         }
       }
     }
 
-    // 4. 构造结果
-    return Array.from({ length: k2 }, (_, i) => {
-      const index = indices[i];
-      const score = index !== undefined ? scores[index] : 0;
-      return {
-        index: index ?? 0,
-        score: score ?? 0
-      };
-    });
+    // 4. 从堆中提取结果并按分数降序排列
+    const topKResults: Array<{ index: number; score: number }> = [];
+    while (!minHeap.isEmpty()) {
+      const item = minHeap.pop();
+      if (item) {
+        topKResults.push(item);
+      }
+    }
+    topKResults.reverse(); // 堆弹出的是升序，所以需要反转为降序
+    return topKResults;
   }
 
   /**

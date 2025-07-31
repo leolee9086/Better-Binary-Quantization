@@ -471,7 +471,7 @@ export class OptimizedScalarQuantizer {
    * transposeHalfByte 方法
    * 
    * @param q 4位量化的查询向量，值在0-15之间
-   * @param quantQueryByte 转置后的字节数组，长度为 Math.ceil(q.length / 8) * 4
+   * @param quantQueryByte 转置后的字节数组，长度为q.length * 4
    */
   public static transposeHalfByte(q: Uint8Array, quantQueryByte: Uint8Array): void {
     // 输入验证
@@ -479,8 +479,8 @@ export class OptimizedScalarQuantizer {
       throw new Error('输入数组不能为空');
     }
     
-    // 修复：根据Java实现，输出数组长度应该是 Math.ceil(q.length / 8) * 4
-    const expectedLength = Math.ceil(q.length / 8) * 4;
+    // 修复：根据Java实现，输出数组长度应该是 q.length * 4
+    const expectedLength = q.length * 4;
     if (quantQueryByte.length !== expectedLength) {
       throw new Error(`转置数组长度不正确，期望${expectedLength}，实际${quantQueryByte.length}`);
     }
@@ -488,40 +488,30 @@ export class OptimizedScalarQuantizer {
     // 清空输出数组
     quantQueryByte.fill(0);
     
-    // 严格按照Java原版实现
-    let i = 0;
-    while (i < q.length) {
-      // 确保4位量化值在0-15范围内
+        // 严格按照Lucene原版实现
+    // 每个4位值需要4个位平面，每个位平面的大小等于原始向量长度
+    const planeSize = q.length;
+    
+    for (let i = 0; i < q.length; i++) {
       const qVal = q[i];
       if (qVal === undefined || qVal < 0 || qVal > 15) {
         throw new Error('4位量化值必须在0-15之间');
       }
       
-      let lowerByte = 0;
-      let lowerMiddleByte = 0;
-      let upperMiddleByte = 0;
-      let upperByte = 0;
+      // 将4位值分解为4个位平面
+      // 每个位只存储0或1，不需要左移7位
+      const bit0 = (qVal & 1);        // 最低位
+      const bit1 = ((qVal >> 1) & 1); // 次低位
+      const bit2 = ((qVal >> 2) & 1); // 次高位
+      const bit3 = ((qVal >> 3) & 1); // 最高位
       
-      // 处理8个4位值（或剩余的4位值）
-      for (let j = 7; j >= 0 && i < q.length; j--) {
-        const currentQVal = q[i];
-        if (currentQVal !== undefined) {
-          lowerByte |= (currentQVal & 1) << j;
-          lowerMiddleByte |= ((currentQVal >> 1) & 1) << j;
-          upperMiddleByte |= ((currentQVal >> 2) & 1) << j;
-          upperByte |= ((currentQVal >> 3) & 1) << j;
-        }
-        i++;
-      }
-      
-      // 计算索引并存储到对应的位平面 - 严格按照Java原版
-      const index = Math.floor((i + 7) / 8) - 1;
-      quantQueryByte[index] = lowerByte;
-      quantQueryByte[index + Math.floor(quantQueryByte.length / 4)] = lowerMiddleByte;
-      quantQueryByte[index + Math.floor(quantQueryByte.length / 2)] = upperMiddleByte;
-      quantQueryByte[index + Math.floor(3 * quantQueryByte.length / 4)] = upperByte;
+      // 存储到对应的位平面
+      quantQueryByte[i] = bit0;                    // 第0个位平面
+      quantQueryByte[i + planeSize] = bit1;        // 第1个位平面
+      quantQueryByte[i + planeSize * 2] = bit2;    // 第2个位平面
+      quantQueryByte[i + planeSize * 3] = bit3;    // 第3个位平面
     }
-  }
+    }
 
   /**
    * 优化的半字节转置（带缓存）
@@ -603,63 +593,7 @@ export class OptimizedScalarQuantizer {
     }
   }
 
-  /**
-   * 生成缓存键
-   * 基于输入数组的长度和内容生成唯一的缓存键
-   * 
-   * @param q 输入数组
-   * @returns 缓存键
-   */
-  /**
-   * 生成缓存键
-   * 使用FNV-1a哈希算法生成高效的缓存键
-   * 
-   * @param q 输入数组
-   * @returns 缓存键
-   */
-  public static getCacheKey(q: Uint8Array): string {
-    // FNV-1a 哈希算法的常量
-    const FNV_PRIME = 0x01000193;
-    const FNV_OFFSET_BASIS = 0x811C9DC5;
 
-    // 初始化哈希值
-    let hash = FNV_OFFSET_BASIS;
-
-    // 首先哈希数组长度
-    hash ^= q.length;
-    hash = Math.imul(hash, FNV_PRIME);
-
-    // 每8个字节一组进行哈希
-    const step = 8;
-    const fullGroups = Math.floor(q.length / step);
-    
-    // 处理完整的8字节组
-    for (let i = 0; i < fullGroups; i++) {
-      const offset = i * step;
-      // 将8个字节组合成一个数字
-      let value = q[offset]!;
-      for (let j = 1; j < step; j++) {
-        value = (value << 8) | q[offset + j]!;
-      }
-      hash ^= value;
-      hash = Math.imul(hash, FNV_PRIME);
-    }
-
-    // 处理剩余字节
-    const remaining = q.length % step;
-    if (remaining > 0) {
-      const offset = fullGroups * step;
-      let value = q[offset]!;
-      for (let i = 1; i < remaining; i++) {
-        value = (value << 8) | q[offset + i]!;
-      }
-      hash ^= value;
-      hash = Math.imul(hash, FNV_PRIME);
-    }
-
-    // 返回最终的哈希值
-    return hash.toString(36);
-  }
 
   /**
    * 转置缓存

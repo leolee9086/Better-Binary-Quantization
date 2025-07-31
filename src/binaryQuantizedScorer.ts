@@ -67,8 +67,8 @@ export class BinaryQuantizedScorer {
     this.cacheStats.misses++;
 
     // 计算转置 - 使用明确的类型和大小
-    const planeSize: number = Math.ceil(quantizedQuery.length / 8);
-    const transposedSize: number = planeSize * 4;
+   // const planeSize: number = Math.ceil(quantizedQuery.length / 8);
+    const transposedSize: number = quantizedQuery.length * 4;
     const transposedQuery = new Uint8Array(transposedSize);
     
     OptimizedScalarQuantizer.transposeHalfByteOptimized(quantizedQuery, transposedQuery, false);

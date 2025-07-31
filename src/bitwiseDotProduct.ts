@@ -7,53 +7,102 @@
 import { bitCount } from './utils';
 
 /**
- * 4位-1位点积计算
- * 计算4位量化的查询向量与1位量化的索引向量的点积
- * 
- * 严格按照Java原版实现
- * org.apache.lucene.internal.vectorization.DefaultVectorUtilSupport
- * int4BitDotProductImpl 方法
+ * 4位-1位点积计算（完全展开版本）
+ * 将4个位平面的循环完全展开，避免循环开销
  * 
  * @param q 4位量化的查询向量（转置后的格式，4个位平面）
  * @param d 1位量化的索引向量
  * @returns 点积结果
  */
 export function computeInt4BitDotProduct(q: Uint8Array, d: Uint8Array): number {
-  // 修复：转置后的4bit查询向量长度应该是 Math.ceil(d.length / 8) * 4
-  // 因为d是未打包的1bit索引向量，长度等于原始维度
-  const expectedLength = Math.ceil(d.length / 8) * 4;
-  if (q.length !== expectedLength) {
-    throw new Error(`4位查询向量长度不正确，期望${expectedLength}，实际${q.length}`);
+  // 验证输入：q应该是4个位平面，d是1位向量
+  if (q.length !== d.length * 4) {
+    throw new Error(`4位查询向量长度${q.length}与1位索引向量长度${d.length}不匹配，期望查询向量长度为${d.length * 4}`);
   }
 
-  // 简化实现：直接处理转置后的4bit查询向量和1bit索引向量
+  const size = d.length;
   let ret = 0;
-  const planeSize = Math.ceil(d.length / 8); // 每个位平面的大小
 
-  // 分别计算4个位平面的点积
-  for (let i = 0; i < 4; i++) {
-    let subRet = 0;
-
-    // 处理每个位平面
-    for (let j = 0; j < planeSize; j++) {
-      const qVal = q[i * planeSize + j];
-      if (qVal !== undefined) {
-        // 计算这个字节与对应索引向量的点积
-        for (let k = 0; k < 8 && j * 8 + k < d.length; k++) {
-          const dVal = d[j * 8 + k];
-          if (dVal !== undefined) {
-            // 检查对应位是否都为1
-            if ((qVal & (1 << (7 - k))) && dVal) {
-              subRet++;
-            }
-          }
-        }
-      }
-    }
-
-    // 将结果左移i位并累加
-    ret += subRet << i;
+  // 完全展开4个位平面的计算
+  // 位平面0
+  let subRet0 = 0;
+  let r0 = 0;
+  const upperBound0 = d.length & -4;
+  for (; r0 < upperBound0; r0 += 4) {
+    const qInt = getBigEndianInt32(q, r0);
+    const dInt = getBigEndianInt32(d, r0);
+    const bitwiseAnd = qInt & dInt;
+    subRet0 += bitCount(bitwiseAnd);
   }
+  for (; r0 < d.length; r0++) {
+    const qVal = q[r0];
+    const dVal = d[r0];
+    if (qVal !== undefined && dVal !== undefined) {
+      const bitwiseAnd = (qVal & dVal) & 0xFF;
+      subRet0 += bitCount(bitwiseAnd);
+    }
+  }
+
+  // 位平面1
+  let subRet1 = 0;
+  let r1 = 0;
+  const upperBound1 = d.length & -4;
+  for (; r1 < upperBound1; r1 += 4) {
+    const qInt = getBigEndianInt32(q, size + r1);
+    const dInt = getBigEndianInt32(d, r1);
+    const bitwiseAnd = qInt & dInt;
+    subRet1 += bitCount(bitwiseAnd);
+  }
+  for (; r1 < d.length; r1++) {
+    const qVal = q[size + r1];
+    const dVal = d[r1];
+    if (qVal !== undefined && dVal !== undefined) {
+      const bitwiseAnd = (qVal & dVal) & 0xFF;
+      subRet1 += bitCount(bitwiseAnd);
+    }
+  }
+
+  // 位平面2
+  let subRet2 = 0;
+  let r2 = 0;
+  const upperBound2 = d.length & -4;
+  for (; r2 < upperBound2; r2 += 4) {
+    const qInt = getBigEndianInt32(q, size * 2 + r2);
+    const dInt = getBigEndianInt32(d, r2);
+    const bitwiseAnd = qInt & dInt;
+    subRet2 += bitCount(bitwiseAnd);
+  }
+  for (; r2 < d.length; r2++) {
+    const qVal = q[size * 2 + r2];
+    const dVal = d[r2];
+    if (qVal !== undefined && dVal !== undefined) {
+      const bitwiseAnd = (qVal & dVal) & 0xFF;
+      subRet2 += bitCount(bitwiseAnd);
+    }
+  }
+
+  // 位平面3
+  let subRet3 = 0;
+  let r3 = 0;
+  const upperBound3 = d.length & -4;
+  for (; r3 < upperBound3; r3 += 4) {
+    const qInt = getBigEndianInt32(q, size * 3 + r3);
+    const dInt = getBigEndianInt32(d, r3);
+    const bitwiseAnd = qInt & dInt;
+    subRet3 += bitCount(bitwiseAnd);
+  }
+  for (; r3 < d.length; r3++) {
+    const qVal = q[size * 3 + r3];
+    const dVal = d[r3];
+    if (qVal !== undefined && dVal !== undefined) {
+      const bitwiseAnd = (qVal & dVal) & 0xFF;
+      subRet3 += bitCount(bitwiseAnd);
+    }
+  }
+
+  // 加权累加所有位平面
+  ret = subRet0 + (subRet1 << 1) + (subRet2 << 2) + (subRet3 << 3);
+
   return ret;
 }
 
@@ -184,22 +233,20 @@ export function computeInt4BitDotProductWithPackedIndex(q: Uint8Array, d: Uint8A
  * @returns 32位整数
  */
 function getBigEndianInt32(array: Uint8Array, offset: number): number {
-  if (offset + 3 >= array.length) {
-    throw new Error('数组越界');
-  }
-
-  // 大端序读取32位整数
+  // 假设调用方已经确保了安全偏移量
   const val0 = array[offset];
   const val1 = array[offset + 1];
   const val2 = array[offset + 2];
   const val3 = array[offset + 3];
-
+  
+  // 仍然保留 undefined 检查，以防万一，或者在调用方确保不会出现 undefined
   if (val0 === undefined || val1 === undefined || val2 === undefined || val3 === undefined) {
-    throw new Error('数组访问越界');
+    // 这通常不应该发生，如果外部循环逻辑正确
+    throw new Error('内部错误：数组访问越界'); 
   }
-
+  
   return ((val0 & 0xFF) << 24) |
-    ((val1 & 0xFF) << 16) |
-    ((val2 & 0xFF) << 8) |
-    (val3 & 0xFF);
+         ((val1 & 0xFF) << 16) |
+         ((val2 & 0xFF) << 8) |
+         (val3 & 0xFF);
 } 
