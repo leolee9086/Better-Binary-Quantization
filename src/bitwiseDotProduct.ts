@@ -29,11 +29,11 @@ export function computeInt4BitDotProduct(q: Uint8Array, d: Uint8Array): number {
   // 简化实现：直接处理转置后的4bit查询向量和1bit索引向量
   let ret = 0;
   const planeSize = Math.ceil(d.length / 8); // 每个位平面的大小
-  
+
   // 分别计算4个位平面的点积
   for (let i = 0; i < 4; i++) {
     let subRet = 0;
-    
+
     // 处理每个位平面
     for (let j = 0; j < planeSize; j++) {
       const qVal = q[i * planeSize + j];
@@ -50,7 +50,7 @@ export function computeInt4BitDotProduct(q: Uint8Array, d: Uint8Array): number {
         }
       }
     }
-    
+
     // 将结果左移i位并累加
     ret += subRet << i;
   }
@@ -71,7 +71,7 @@ export function computeInt1BitDotProduct(q: Uint8Array, d: Uint8Array): number {
   }
 
   let ret = 0;
-  
+
   // 逐字节计算位运算点积
   for (let i = 0; i < q.length; i++) {
     const qVal = q[i];
@@ -101,12 +101,12 @@ export function computeInt4BitDotProductOptimized(q: Uint8Array, d: Uint8Array):
 
   let ret = 0;
   const size = d.length;
-  
+
   // 分别计算4个位平面的点积 - 完全按照Lucene原始实现
   for (let i = 0; i < 4; i++) {
     let r = 0;
     let subRet = 0;
-    
+
     // 处理整数边界对齐的部分
     const upperBound = d.length & -4; // Integer.BYTES = 4
     for (; r < upperBound; r += 4) {
@@ -116,7 +116,7 @@ export function computeInt4BitDotProductOptimized(q: Uint8Array, d: Uint8Array):
       const bitwiseAnd = qInt & dInt;
       subRet += bitCount(bitwiseAnd);
     }
-    
+
     // 处理剩余的部分
     for (; r < d.length; r++) {
       const qVal = q[i * size + r];
@@ -126,7 +126,7 @@ export function computeInt4BitDotProductOptimized(q: Uint8Array, d: Uint8Array):
         subRet += bitCount(bitwiseAnd);
       }
     }
-    
+
     // 加权累加
     ret += subRet << i;
   }
@@ -155,12 +155,12 @@ export function computeInt4BitDotProductWithPackedIndex(q: Uint8Array, d: Uint8A
   // 对每个位平面计算点积
   for (let i = 0; i < 4; i++) {
     let subRet = 0;
-    
+
     // 处理每个字节
     for (let r = 0; r < size; r++) {
       const qByte = q[i * size + r];
       const dByte = d[r];
-      
+
       if (qByte !== undefined && dByte !== undefined) {
         // 计算位与操作并统计1的个数
         const bitwiseAnd = qByte & dByte;
@@ -168,7 +168,7 @@ export function computeInt4BitDotProductWithPackedIndex(q: Uint8Array, d: Uint8A
         subRet += count;
       }
     }
-    
+
     // 将结果左移i位并累加
     ret += subRet << i;
   }
@@ -187,19 +187,19 @@ function getBigEndianInt32(array: Uint8Array, offset: number): number {
   if (offset + 3 >= array.length) {
     throw new Error('数组越界');
   }
-  
+
   // 大端序读取32位整数
   const val0 = array[offset];
   const val1 = array[offset + 1];
   const val2 = array[offset + 2];
   const val3 = array[offset + 3];
-  
+
   if (val0 === undefined || val1 === undefined || val2 === undefined || val3 === undefined) {
     throw new Error('数组访问越界');
   }
-  
+
   return ((val0 & 0xFF) << 24) |
-         ((val1 & 0xFF) << 16) |
-         ((val2 & 0xFF) << 8) |
-         (val3 & 0xFF);
+    ((val1 & 0xFF) << 16) |
+    ((val2 & 0xFF) << 8) |
+    (val3 & 0xFF);
 } 

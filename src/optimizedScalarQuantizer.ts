@@ -540,31 +540,24 @@ export class OptimizedScalarQuantizer {
     quantQueryByte: Uint8Array, 
     useCache: boolean = true
   ): void {
-    // 缓存键：基于输入数组的长度和内容哈希
-    const cacheKey = useCache ? OptimizedScalarQuantizer.getCacheKey(q) : null;
-    
-    // 检查缓存
-    if (cacheKey && OptimizedScalarQuantizer.transposeCache.has(cacheKey)) {
-      const cached = OptimizedScalarQuantizer.transposeCache.get(cacheKey)!;
-      quantQueryByte.set(cached);
-      return;
+    // 直接使用数组作为键，无需字符串转换
+    if (useCache) {
+      const cached = OptimizedScalarQuantizer.transposeCache.get(q);
+      if (cached) {
+        OptimizedScalarQuantizer.cacheStats.hits++;
+        quantQueryByte.set(cached);
+        return;
+      }
+      OptimizedScalarQuantizer.cacheStats.misses++;
     }
 
     // 执行转置操作
     OptimizedScalarQuantizer.transposeHalfByte(q, quantQueryByte);
     
-    // 缓存结果
-    if (cacheKey) {
+    // 缓存结果 - WeakMap 会自动处理内存管理
+    if (useCache) {
       const cached = new Uint8Array(quantQueryByte);
-      OptimizedScalarQuantizer.transposeCache.set(cacheKey, cached);
-      
-      // 限制缓存大小，避免内存泄漏
-      if (OptimizedScalarQuantizer.transposeCache.size > 1000) {
-        const firstKey = OptimizedScalarQuantizer.transposeCache.keys().next().value;
-        if (firstKey) {
-          OptimizedScalarQuantizer.transposeCache.delete(firstKey);
-        }
-      }
+      OptimizedScalarQuantizer.transposeCache.set(q, cached);
     }
   }
 
@@ -624,7 +617,7 @@ export class OptimizedScalarQuantizer {
    * @param q 输入数组
    * @returns 缓存键
    */
-  private static getCacheKey(q: Uint8Array): string {
+  public static getCacheKey(q: Uint8Array): string {
     // FNV-1a 哈希算法的常量
     const FNV_PRIME = 0x01000193;
     const FNV_OFFSET_BASIS = 0x811C9DC5;
@@ -670,16 +663,18 @@ export class OptimizedScalarQuantizer {
 
   /**
    * 转置缓存
-   * 存储已计算的转置结果
+   * 存储已计算的转置结果，使用 WeakMap 避免内存泄漏
    */
-  private static transposeCache = new Map<string, Uint8Array>();
+  private static transposeCache = new WeakMap<Uint8Array, Uint8Array>();
+  private static cacheStats = { hits: 0, misses: 0 };
 
   /**
    * 清除转置缓存
-   * 用于内存管理
+   * WeakMap 无法直接清除，但可以通过重新创建来清空
    */
   public static clearTransposeCache(): void {
-    OptimizedScalarQuantizer.transposeCache.clear();
+    OptimizedScalarQuantizer.transposeCache = new WeakMap();
+    OptimizedScalarQuantizer.cacheStats = { hits: 0, misses: 0 };
   }
 
   /**
@@ -688,9 +683,11 @@ export class OptimizedScalarQuantizer {
    * @returns 缓存统计信息
    */
   public static getTransposeCacheStats(): { size: number; hitRate: number } {
+    const total = OptimizedScalarQuantizer.cacheStats.hits + OptimizedScalarQuantizer.cacheStats.misses;
+    const hitRate = total > 0 ? OptimizedScalarQuantizer.cacheStats.hits / total : 0;
     return {
-      size: OptimizedScalarQuantizer.transposeCache.size,
-      hitRate: 0 // 需要添加命中率统计
+      size: 0, // WeakMap 无法获取 size
+      hitRate
     };
   }
 } 

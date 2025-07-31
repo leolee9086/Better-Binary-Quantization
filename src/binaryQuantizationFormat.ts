@@ -389,7 +389,10 @@ export class BinaryQuantizationFormat {
       );
 
       for (let j = 0; j < results.length; j++) {
-        scores[i + j] = results[j].score;
+        const result = results[j];
+        if (result) {
+          scores[i + j] = result.score;
+        }
       }
     }
 
@@ -398,22 +401,34 @@ export class BinaryQuantizationFormat {
     for (let i = 0; i < k2; i++) {
       let maxIdx = i;
       for (let j = i + 1; j < vectorCount; j++) {
-        if (scores[indices[j]] > scores[indices[maxIdx]]) {
+        const idxJ = indices[j];
+        const idxMax = indices[maxIdx];
+        if (idxJ !== undefined && idxMax !== undefined && 
+            idxJ < scores.length && idxMax < scores.length && 
+            scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
+            scores[idxJ] > scores[idxMax]) {
           maxIdx = j;
         }
       }
       if (maxIdx !== i) {
         const temp = indices[i];
-        indices[i] = indices[maxIdx];
-        indices[maxIdx] = temp;
+        const maxIdxValue = indices[maxIdx];
+        if (temp !== undefined && maxIdxValue !== undefined) {
+          indices[i] = maxIdxValue;
+          indices[maxIdx] = temp;
+        }
       }
     }
 
     // 4. 构造结果
-    return Array.from({ length: k2 }, (_, i) => ({
-      index: indices[i],
-      score: scores[indices[i]]
-    }));
+    return Array.from({ length: k2 }, (_, i) => {
+      const index = indices[i];
+      const score = index !== undefined ? scores[index] : 0;
+      return {
+        index: index ?? 0,
+        score: score ?? 0
+      };
+    });
   }
 
   /**

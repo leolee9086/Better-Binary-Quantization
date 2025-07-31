@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { 
   loadSiftDataset, 
-  loadSiftQueries, 
-  type SiftVector 
+  loadSiftQueries
 } from './siftDataLoader';
 
 describe('SIFT1M数据加载测试', () => {

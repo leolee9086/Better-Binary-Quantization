@@ -129,7 +129,7 @@ describe('量化索引构建时间成本测试', () => {
     
     for (const config of configs) {
       it(`${config.name}配置的构建时间`, () => {
-        const { result, avgTime } = measureBuildTime(
+        const { result } = measureBuildTime(
           `${config.name}配置构建`,
           () => {
             const format = new BinaryQuantizationFormat({

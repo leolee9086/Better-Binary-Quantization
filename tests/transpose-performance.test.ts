@@ -56,28 +56,28 @@ describe('transposeHalfByte性能测试', () => {
       OptimizedScalarQuantizer.clearTransposeCache();
 
       // 测试原始版本
-      const originalTime = measurePerformance(
+      measurePerformance(
         `${name} - 原始版本`,
         () => OptimizedScalarQuantizer.transposeHalfByte(inputVector, outputVector1),
         1000
       );
 
       // 测试优化版本（无缓存）
-      const optimizedNoCacheTime = measurePerformance(
+      measurePerformance(
         `${name} - 优化版本（无缓存）`,
         () => OptimizedScalarQuantizer.transposeHalfByteOptimized(inputVector, outputVector2, false),
         1000
       );
 
       // 测试优化版本（有缓存）
-      const optimizedWithCacheTime = measurePerformance(
+      measurePerformance(
         `${name} - 优化版本（有缓存）`,
         () => OptimizedScalarQuantizer.transposeHalfByteOptimized(inputVector, outputVector3, true),
         1000
       );
 
       // 测试快速版本
-      const fastTime = measurePerformance(
+      measurePerformance(
         `${name} - 快速版本`,
         () => OptimizedScalarQuantizer.transposeHalfByteFast(inputVector, outputVector3),
         1000
@@ -108,14 +108,14 @@ describe('transposeHalfByte性能测试', () => {
     OptimizedScalarQuantizer.clearTransposeCache();
 
     // 第一次调用（无缓存）
-    const firstCallTime = measurePerformance(
+    measurePerformance(
       '128维向量 - 第一次调用（无缓存）',
       () => OptimizedScalarQuantizer.transposeHalfByteOptimized(inputVector, outputVector, true),
       100
     );
 
     // 第二次调用（有缓存）
-    const secondCallTime = measurePerformance(
+    measurePerformance(
       '128维向量 - 第二次调用（有缓存）',
       () => OptimizedScalarQuantizer.transposeHalfByteOptimized(inputVector, outputVector, true),
       100

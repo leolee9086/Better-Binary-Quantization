@@ -59,7 +59,10 @@ describe('SIFT1M性能测试', () => {
 
   describe('搜索性能', () => {
     bench('量化搜索 - 单个查询', () => {
-      format.searchNearestNeighbors(queryVectors[0], quantizedData.quantizedVectors, k);
+      const query = queryVectors[0];
+      if (query) {
+        format.searchNearestNeighbors(query, quantizedData.quantizedVectors, k);
+      }
     });
 
     bench('量化搜索 - 批量查询', () => {
@@ -78,22 +81,37 @@ describe('SIFT1M性能测试', () => {
       }
 
       // 计算相似度
-      for (let i = 0; i < baseVectors.length; i++) {
-        scores[i] = computeCosineSimilarity(queryVectors[0], baseVectors[i]);
-      }
-
-      // 选择前k个
-      for (let i = 0; i < k; i++) {
-        let maxIdx = i;
-        for (let j = i + 1; j < baseVectors.length; j++) {
-          if (scores[indices[j]] > scores[indices[maxIdx]]) {
-            maxIdx = j;
+      const query = queryVectors[0];
+      if (query) {
+        for (let i = 0; i < baseVectors.length; i++) {
+          const baseVector = baseVectors[i];
+          if (baseVector) {
+            scores[i] = computeCosineSimilarity(query, baseVector);
+          } else {
+            scores[i] = 0;
           }
         }
-        if (maxIdx !== i) {
-          const temp = indices[i];
-          indices[i] = indices[maxIdx];
-          indices[maxIdx] = temp;
+
+                    // 选择前k个
+            for (let i = 0; i < k; i++) {
+              let maxIdx = i;
+              for (let j = i + 1; j < baseVectors.length; j++) {
+                const idxJ = indices[j];
+                const idxMax = indices[maxIdx];
+                if (idxJ !== undefined && idxMax !== undefined && 
+                    scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
+                    scores[idxJ] > scores[idxMax]) {
+                  maxIdx = j;
+                }
+              }
+          if (maxIdx !== i) {
+            const temp = indices[i];
+            const maxIdxValue = indices[maxIdx];
+            if (temp !== undefined && maxIdxValue !== undefined) {
+              indices[i] = maxIdxValue;
+              indices[maxIdx] = temp;
+            }
+          }
         }
       }
     });
@@ -108,23 +126,37 @@ describe('SIFT1M性能测试', () => {
       }
 
       for (const query of queryVectors) {
-        // 计算相似度
-        for (let i = 0; i < baseVectors.length; i++) {
-          scores[i] = computeCosineSimilarity(query, baseVectors[i]);
-        }
-
-        // 选择前k个
-        for (let i = 0; i < k; i++) {
-          let maxIdx = i;
-          for (let j = i + 1; j < baseVectors.length; j++) {
-            if (scores[indices[j]] > scores[indices[maxIdx]]) {
-              maxIdx = j;
+        if (query) {
+          // 计算相似度
+          for (let i = 0; i < baseVectors.length; i++) {
+            const baseVector = baseVectors[i];
+            if (baseVector) {
+              scores[i] = computeCosineSimilarity(query, baseVector);
+            } else {
+              scores[i] = 0;
             }
           }
-          if (maxIdx !== i) {
-            const temp = indices[i];
-            indices[i] = indices[maxIdx];
-            indices[maxIdx] = temp;
+
+          // 选择前k个
+          for (let i = 0; i < k; i++) {
+            let maxIdx = i;
+            for (let j = i + 1; j < baseVectors.length; j++) {
+              const idxJ = indices[j];
+              const idxMax = indices[maxIdx];
+              if (idxJ !== undefined && idxMax !== undefined && 
+                  scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
+                  scores[idxJ] > scores[idxMax]) {
+                maxIdx = j;
+              }
+            }
+            if (maxIdx !== i) {
+              const temp = indices[i];
+              const maxIdxValue = indices[maxIdx];
+              if (temp !== undefined && maxIdxValue !== undefined) {
+                indices[i] = maxIdxValue;
+                indices[maxIdx] = temp;
+              }
+            }
           }
         }
       }
@@ -134,7 +166,8 @@ describe('SIFT1M性能测试', () => {
   describe('内存分析', () => {
     bench('内存压缩比', () => {
       // 原始数据大小（字节）
-      const originalSize = baseVectors.length * baseVectors[0].length * 4; // 4字节/浮点数
+      const firstVector = baseVectors[0];
+      const originalSize = firstVector ? baseVectors.length * firstVector.length * 4 : 0; // 4字节/浮点数
       
       // 量化数据大小（字节）
       const quantizedSize = quantizedData.quantizedVectors.size() * quantizedData.quantizedVectors.vectorValue(0).length;

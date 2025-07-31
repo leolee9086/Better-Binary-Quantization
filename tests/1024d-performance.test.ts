@@ -60,7 +60,7 @@ function measurePerformance(name: string, fn: () => any, iterations: number = 1)
 
 describe('1024维向量单比特量化+4bit查询性能测试', () => {
   const DIM = 1024;
-  const BASE_SIZES = [1000];
+  const BASE_SIZES = [5000];
   const QUERY_SIZE = 100;
   const K = 10;
   const OVERSAMPLE_FACTOR = 5; // 增加超采样因子到5倍
@@ -125,7 +125,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
           const query = queryVectors[i % queryVectors.length];
           if (!query) continue;
           const start = performance.now();
-          const results = format.searchNearestNeighbors(query, quantizedVectors, K);
+          format.searchNearestNeighbors(query, quantizedVectors, K);
           const end = performance.now();
           queryTimes.push(end - start);
         }

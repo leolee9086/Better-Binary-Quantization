@@ -118,7 +118,8 @@ export function centerVector(vector: Float32Array, centroid: Float32Array): Floa
 }
 
 /**
- * 计算向量集合的质心
+ * 计算向量集合的质心 - 优化版本
+ * 交换循环顺序以改善缓存局部性
  * @param vectors 向量集合
  * @returns 质心向量
  */
@@ -134,16 +135,28 @@ export function computeCentroid(vectors: Float32Array[]): Float32Array {
   const dimension = firstVector.length;
   const centroid = new Float32Array(dimension);
 
+  // 初始化质心为第一个向量
   for (let i = 0; i < dimension; i++) {
-    let sum = 0;
-    for (let j = 0; j < vectors.length; j++) {
-      const vector = vectors[j];
-      const val = vector?.[i];
-      if (val !== undefined) {
-        sum += val;
+    centroid[i] = vectors[0]![i] ?? 0;
+  }
+
+  // 从第二个向量开始累加
+  for (let j = 1; j < vectors.length; j++) {
+    const vector = vectors[j];
+    if (vector) {
+      for (let i = 0; i < dimension; i++) {
+        const val = vector[i];
+        if (val !== undefined) {
+          centroid[i]! += val;
+        }
       }
     }
-    centroid[i] = sum / vectors.length;
+  }
+
+  // 除以向量数量
+  const numVectors = vectors.length;
+  for (let i = 0; i < dimension; i++) {
+    centroid[i]! /= numVectors;
   }
 
   return centroid;

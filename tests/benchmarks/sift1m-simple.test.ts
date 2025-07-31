@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { 
   loadSiftDataset, 
-  loadSiftQueries, 
-  type SiftVector 
+  loadSiftQueries
 } from './siftDataLoader';
 import { 
-  createBinaryQuantizationFormat, 
   quickQuantize, 
   quickSearch 
 } from '../../src/index';
@@ -28,7 +26,10 @@ describe('SIFT1M简单功能测试', () => {
     console.log('📊 量化结果:', quantizedResult);
     
     // 测试搜索
-    const queryVector = queryData.queries[0].values;
+    const queryVector = queryData.queries[0]?.values;
+    if (!queryVector) {
+      throw new Error('查询向量为空');
+    }
     const searchResult = quickSearch(queryVector, vectors, 5);
     console.log('📊 搜索结果:', searchResult);
     
