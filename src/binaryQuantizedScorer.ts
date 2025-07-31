@@ -37,8 +37,6 @@ function scaleMaxInnerProductScore(score: number): number {
  */
 export class BinaryQuantizedScorer {
   private readonly similarityFunction: VectorSimilarityFunction;
-  private transposedQueryCache: WeakMap<Uint8Array, Uint8Array>;
-  private cacheStats: { hits: number; misses: number };
 
   /**
    * 构造函数
@@ -324,7 +322,7 @@ export class BinaryQuantizedScorer {
     const transposedQuery = this.getTransposedQuery(quantizedQuery);
 
     // 计算点积
-    const qcDist = computeInt4BitDotProduct(transposedQuery, unpackedBinaryCode);
+    const qcDist = computeInt4BitDotProduct(quantizedQuery, unpackedBinaryCode);
 
     // 3. 获取目标向量的修正因子
     const indexCorrections = targetVectors.getCorrectiveTerms(targetOrd);

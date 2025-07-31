@@ -140,7 +140,7 @@ describe('暴力查询性能测试', () => {
       
       // 构建量化索引
       const format = new BinaryQuantizationFormat({
-        queryBits: 4,
+        queryBits: 1,
         indexBits: 1,
         quantizer: {
           similarityFunction: VectorSimilarityFunction.COSINE,
@@ -168,16 +168,16 @@ describe('暴力查询性能测试', () => {
       const vectors = generateVectors(baseSize, dim);
       const queryVectors = generateVectors(QUERY_SIZE, dim);
       
-      // 构建量化索引（不计入查询时间）
-      const format = new BinaryQuantizationFormat({
-        queryBits: 4,
-        indexBits: 1,
-        quantizer: {
-          similarityFunction: VectorSimilarityFunction.COSINE,
-          lambda: 0.01,
-          iters: 20
-        }
-      });
+             // 构建量化索引（不计入查询时间）
+       const format = new BinaryQuantizationFormat({
+         queryBits: 1,
+         indexBits: 1,
+         quantizer: {
+           similarityFunction: VectorSimilarityFunction.COSINE,
+           lambda: 0.01,
+           iters: 20
+         }
+       });
       
       const { quantizedVectors } = format.quantizeVectors(vectors);
       
@@ -196,7 +196,13 @@ describe('暴力查询性能测试', () => {
         const results = [];
         for (let i = 0; i < QUERY_SIZE; i++) {
           const query = queryVectors[i]!;
-          results.push(format.searchNearestNeighbors(query, quantizedVectors, K));
+          const quantizedResults = format.searchNearestNeighbors(query, quantizedVectors, K);
+          // 转换为与暴力查询相同的结构
+          const convertedResults = quantizedResults.map(r => ({
+            index: r.index,
+            similarity: r.score
+          }));
+          results.push(convertedResults);
         }
         return results;
       };
@@ -219,6 +225,18 @@ describe('暴力查询性能测试', () => {
       // 验证结果一致性
       const bruteForceResults = bruteForceMethod();
       const quantizedResults = quantizedMethod();
+      
+      // 调试：打印第一个查询的详细结果
+      console.log('\n🔍 第一个查询结果对比:');
+      console.log('暴力查询结果:');
+      bruteForceResults[0]!.slice(0, 5).forEach((r, i) => {
+        console.log(`  ${i}: index=${r.index}, similarity=${r.similarity.toFixed(6)}`);
+      });
+      
+      console.log('量化查询结果:');
+      quantizedResults[0]!.slice(0, 5).forEach((r, i) => {
+        console.log(`  ${i}: index=${r.index}, similarity=${r.similarity.toFixed(6)}`);
+      });
       
       let consistencyCount = 0;
       for (let i = 0; i < QUERY_SIZE; i++) {
@@ -283,7 +301,7 @@ describe('暴力查询性能测试', () => {
       
       // 构建量化索引
       const format = new BinaryQuantizationFormat({
-        queryBits: 4,
+        queryBits: 1,
         indexBits: 1,
         quantizer: {
           similarityFunction: VectorSimilarityFunction.COSINE,
@@ -293,7 +311,7 @@ describe('暴力查询性能测试', () => {
       });
       
       const { quantizedVectors } = format.quantizeVectors(vectors);
-      const quantizedMemory = quantizedVectors.size() * (dim / 2); // 4位量化
+      const quantizedMemory = quantizedVectors.size() * (dim / 8); // 1位量化：每8个维度1字节
       
       console.log(`\n📊 内存使用对比:`);
       console.log(`原始向量内存: ${(originalMemory / 1024 / 1024).toFixed(2)} MB`);
