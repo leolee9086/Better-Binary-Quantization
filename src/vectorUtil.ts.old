@@ -1,0 +1,551 @@
+/**
+ * 向量工具类
+ * 实现位运算优化的向量操作
+ * 基于Lucene的二值量化实现
+ */
+
+import { bitCount } from './utils';
+
+/**
+ * 向量工具类
+ * 提供高效的向量操作，包括位运算优化
+ */
+export class VectorUtil {
+  /**
+   * 4位-1位点积计算
+   * 计算4位量化的查询向量与1位量化的索引向量的点积
+   * 
+   * 严格按照Java原版实现
+   * org.apache.lucene.internal.vectorization.DefaultVectorUtilSupport
+   * int4BitDotProductImpl 方法
+   * 
+   * @param q 4位量化的查询向量（转置后的格式，4个位平面）
+   * @param d 1位量化的索引向量
+   * @returns 点积结果
+   */
+  public static int4BitDotProduct(q: Uint8Array, d: Uint8Array): number {
+    // 修复：转置后的4bit查询向量长度应该是 Math.ceil(d.length / 8) * 4
+    // 因为d是未打包的1bit索引向量，长度等于原始维度
+    const expectedLength = Math.ceil(d.length / 8) * 4;
+    if (q.length !== expectedLength) {
+      throw new Error(`4位查询向量长度不正确，期望${expectedLength}，实际${q.length}`);
+    }
+
+    // 简化实现：直接处理转置后的4bit查询向量和1bit索引向量
+    let ret = 0;
+    const planeSize = Math.ceil(d.length / 8); // 每个位平面的大小
+    
+    // 分别计算4个位平面的点积
+    for (let i = 0; i < 4; i++) {
+      let subRet = 0;
+      
+      // 处理每个位平面
+      for (let j = 0; j < planeSize; j++) {
+        const qVal = q[i * planeSize + j];
+        if (qVal !== undefined) {
+          // 计算这个字节与对应索引向量的点积
+          for (let k = 0; k < 8 && j * 8 + k < d.length; k++) {
+            const dVal = d[j * 8 + k];
+            if (dVal !== undefined) {
+              // 检查对应位是否都为1
+              if ((qVal & (1 << (7 - k))) && dVal) {
+                subRet++;
+              }
+            }
+          }
+        }
+      }
+      
+      // 将结果左移i位并累加
+      ret += subRet << i;
+    }
+    return ret;
+  }
+
+
+
+  /**
+   * 单比特-单比特点积计算
+   * 用于单比特量化的向量点积计算
+   * 
+   * @param q 单比特量化的查询向量（打包后的格式）
+   * @param d 单比特量化的索引向量（打包后的格式）
+   * @returns 点积结果
+   */
+  public static int1BitDotProduct(q: Uint8Array, d: Uint8Array): number {
+    if (q.length !== d.length) {
+      throw new Error('单比特向量长度必须相同');
+    }
+
+    let ret = 0;
+    
+    // 逐字节计算位运算点积
+    for (let i = 0; i < q.length; i++) {
+      const qVal = q[i];
+      const dVal = d[i];
+      if (qVal !== undefined && dVal !== undefined) {
+        // 计算位运算AND，然后统计1的个数
+        const bitwiseAnd = (qVal & dVal) & 0xFF;
+        ret += bitCount(bitwiseAnd);
+      }
+    }
+
+    return ret;
+  }
+
+  /**
+   * 优化的4位-1位点积计算
+   * 使用查找表优化的版本，提高性能
+   * 
+   * @param q 4位量化的查询向量（转置后的格式，4个位平面）
+   * @param d 1位量化的索引向量
+   * @returns 点积结果
+   */
+  public static int4BitDotProductOptimized(q: Uint8Array, d: Uint8Array): number {
+    if (q.length !== d.length * 4) {
+      throw new Error('4位查询向量长度必须是1位索引向量长度的4倍');
+    }
+
+    let ret = 0;
+    const size = d.length;
+    
+    // 分别计算4个位平面的点积 - 完全按照Lucene原始实现
+    for (let i = 0; i < 4; i++) {
+      let r = 0;
+      let subRet = 0;
+      
+      // 处理整数边界对齐的部分
+      const upperBound = d.length & -4; // Integer.BYTES = 4
+      for (; r < upperBound; r += 4) {
+        // 使用32位整数进行位运算
+        const qInt = this.getBigEndianInt32(q, i * size + r);
+        const dInt = this.getBigEndianInt32(d, r);
+        const bitwiseAnd = qInt & dInt;
+        subRet += bitCount(bitwiseAnd);
+      }
+      
+      // 处理剩余的部分
+      for (; r < d.length; r++) {
+        const qVal = q[i * size + r];
+        const dVal = d[r];
+        if (qVal !== undefined && dVal !== undefined) {
+          const bitwiseAnd = (qVal & dVal) & 0xFF;
+          subRet += bitCount(bitwiseAnd);
+        }
+      }
+      
+      // 加权累加
+      ret += subRet << i;
+    }
+
+    return ret;
+  }
+
+  /**
+   * 4位查询-已打包1位索引点积计算
+   * 计算4位量化的查询向量与已打包的1位量化索引向量的点积
+   * 
+   * @param q 4位量化的查询向量（转置后的格式，4个位平面）
+   * @param d 已打包的1位量化的索引向量
+   * @returns 点积结果
+   */
+  public static int4BitDotProductWithPackedIndex(q: Uint8Array, d: Uint8Array): number {
+    // 验证输入：q应该是4个位平面，d应该是打包后的1位向量
+    const dimension = d.length * 8; // 1个字节包含8位
+    if (q.length !== dimension * 4) {
+      throw new Error(`4位查询向量长度${q.length}与1位索引向量长度${d.length}不匹配，期望查询向量长度为${dimension * 4}`);
+    }
+
+    let ret = 0;
+    const size = d.length;
+
+    // 对每个位平面计算点积
+    for (let i = 0; i < 4; i++) {
+      let subRet = 0;
+      
+      // 处理每个字节
+      for (let r = 0; r < size; r++) {
+        const qByte = q[i * size + r];
+        const dByte = d[r];
+        
+        if (qByte !== undefined && dByte !== undefined) {
+          // 计算位与操作并统计1的个数
+          const bitwiseAnd = qByte & dByte;
+          const count = bitCount(bitwiseAnd);
+          subRet += count;
+        }
+      }
+      
+      // 将结果左移i位并累加
+      ret += subRet << i;
+    }
+
+    return ret;
+  }
+
+  /**
+   * 从字节数组中读取32位整数（大端序）
+   * 参考 Lucene 的 BitUtil.VH_NATIVE_INT.get 方法
+   * @param array 字节数组
+   * @param offset 偏移量
+   * @returns 32位整数
+   */
+  private static getBigEndianInt32(array: Uint8Array, offset: number): number {
+    if (offset + 3 >= array.length) {
+      throw new Error('数组越界');
+    }
+    
+    // 大端序读取32位整数
+    const val0 = array[offset];
+    const val1 = array[offset + 1];
+    const val2 = array[offset + 2];
+    const val3 = array[offset + 3];
+    
+    if (val0 === undefined || val1 === undefined || val2 === undefined || val3 === undefined) {
+      throw new Error('数组访问越界');
+    }
+    
+    return ((val0 & 0xFF) << 24) |
+           ((val1 & 0xFF) << 16) |
+           ((val2 & 0xFF) << 8) |
+           (val3 & 0xFF);
+  }
+
+  /**
+   * 向量相似性计算
+   * @param a 向量a
+   * @param b 向量b
+   * @param similarityFunction 相似性函数类型
+   * @returns 相似性分数
+   */
+  public static computeSimilarity(
+    a: Float32Array,
+    b: Float32Array,
+    similarityFunction: 'EUCLIDEAN' | 'COSINE' | 'MAXIMUM_INNER_PRODUCT'
+  ): number {
+    switch (similarityFunction) {
+      case 'EUCLIDEAN':
+        return this.computeEuclideanSimilarity(a, b);
+      case 'COSINE':
+        return this.computeCosineSimilarity(a, b);
+      case 'MAXIMUM_INNER_PRODUCT':
+        return this.computeMaximumInnerProduct(a, b);
+      default:
+        throw new Error(`不支持的相似性函数: ${similarityFunction}`);
+    }
+  }
+
+  /**
+   * 计算欧几里得距离
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 欧几里得距离
+   */
+  public static computeEuclideanDistance(a: Float32Array, b: Float32Array): number {
+    if (!a || !b) {
+      throw new Error('向量不能为空');
+    }
+    if (a.length !== b.length) {
+      throw new Error('向量维度不匹配');
+    }
+    
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        const diff = av - bv;
+        sum += diff * diff;
+      }
+    }
+    return Math.sqrt(sum);
+  }
+
+  /**
+   * 计算欧几里得相似性
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 欧几里得相似性分数
+   */
+  private static computeEuclideanSimilarity(a: Float32Array, b: Float32Array): number {
+    const distance = this.computeEuclideanDistance(a, b);
+    return 1.0 / (1.0 + distance);
+  }
+
+  /**
+   * 计算余弦相似性
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 余弦相似性分数
+   */
+  public static computeCosineSimilarity(a: Float32Array, b: Float32Array): number {
+    if (!a || !b) {
+      throw new Error('向量不能为空');
+    }
+    if (a.length !== b.length) {
+      throw new Error('向量维度不匹配');
+    }
+    
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        dotProduct += av * bv;
+        normA += av * av;
+        normB += bv * bv;
+      }
+    }
+
+    if (normA === 0 || normB === 0) {
+      return 0;
+    }
+
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  /**
+   * 计算最大内积
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 最大内积
+   */
+  public static computeMaximumInnerProduct(a: Float32Array, b: Float32Array): number {
+    let dotProduct = 0;
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        dotProduct += av * bv;
+      }
+    }
+    return dotProduct;
+  }
+
+  /**
+   * 向量归一化
+   * @param vector 输入向量
+   * @returns 归一化后的向量
+   */
+  public static normalizeVector(vector: Float32Array): Float32Array {
+    let norm = 0;
+    for (let i = 0; i < vector.length; i++) {
+      const v = vector[i];
+      if (v !== undefined) {
+        norm += v * v;
+      }
+    }
+    norm = Math.sqrt(norm);
+
+    if (norm === 0) {
+      return new Float32Array(vector.length);
+    }
+
+    const normalized = new Float32Array(vector.length);
+    for (let i = 0; i < vector.length; i++) {
+      const v = vector[i];
+      if (v !== undefined) {
+        normalized[i] = v / norm;
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * 计算向量幅度
+   * @param vector 输入向量
+   * @returns 向量幅度
+   */
+  public static computeVectorMagnitude(vector: Float32Array): number {
+    let sum = 0;
+    for (let i = 0; i < vector.length; i++) {
+      const v = vector[i];
+      if (v !== undefined) {
+        sum += v * v;
+      }
+    }
+    return Math.sqrt(sum);
+  }
+
+  /**
+   * 向量加法
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 结果向量
+   */
+  public static addVectors(a: Float32Array, b: Float32Array): Float32Array {
+    if (a.length !== b.length) {
+      throw new Error('向量维度不匹配');
+    }
+
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        result[i] = av + bv;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * 向量减法
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 结果向量
+   */
+  public static subtractVectors(a: Float32Array, b: Float32Array): Float32Array {
+    if (a.length !== b.length) {
+      throw new Error('向量维度不匹配');
+    }
+
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        result[i] = av - bv;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * 向量标量乘法
+   * @param vector 向量
+   * @param scalar 标量
+   * @returns 结果向量
+   */
+  public static scaleVector(vector: Float32Array, scalar: number): Float32Array {
+    const result = new Float32Array(vector.length);
+    for (let i = 0; i < vector.length; i++) {
+      const v = vector[i];
+      if (v !== undefined) {
+        result[i] = v * scalar;
+      }
+    }
+    return result;
+  }
+
+  // 保持原有的函数名作为别名
+  public static normalize = this.normalizeVector;
+  public static add = this.addVectors;
+  public static subtract = this.subtractVectors;
+  public static multiplyByScalar = this.scaleVector;
+  public static computeL2Norm = this.computeVectorMagnitude;
+
+  /**
+   * 向量中心化
+   * @param vector 输入向量
+   * @param centroid 质心向量
+   * @returns 中心化后的向量
+   */
+  public static center(vector: Float32Array, centroid: Float32Array): Float32Array {
+    if (vector.length !== centroid.length) {
+      throw new Error('向量和质心维度不匹配');
+    }
+
+    const centered = new Float32Array(vector.length);
+    for (let i = 0; i < vector.length; i++) {
+      const v = vector[i];
+      const c = centroid[i];
+      if (v !== undefined && c !== undefined) {
+        centered[i] = v - c;
+      }
+    }
+
+    return centered;
+  }
+
+  /**
+   * 计算向量集合的质心
+   * @param vectors 向量集合
+   * @returns 质心向量
+   */
+  public static computeCentroid(vectors: Float32Array[]): Float32Array {
+    if (vectors.length === 0) {
+      throw new Error('向量集合不能为空');
+    }
+
+    const firstVector = vectors[0];
+    if (!firstVector) {
+      throw new Error('第一个向量不能为空');
+    }
+    const dimension = firstVector.length;
+    const centroid = new Float32Array(dimension);
+
+    for (let i = 0; i < dimension; i++) {
+      let sum = 0;
+      for (let j = 0; j < vectors.length; j++) {
+        const vector = vectors[j];
+        const val = vector?.[i];
+        if (val !== undefined) {
+          sum += val;
+        }
+      }
+      centroid[i] = sum / vectors.length;
+    }
+
+    return centroid;
+  }
+
+  /**
+   * 计算两个向量的点积
+   * @param a 向量a
+   * @param b 向量b
+   * @returns 点积
+   */
+  public static computeDotProduct(a: Float32Array, b: Float32Array): number {
+    if (a.length !== b.length) {
+      throw new Error('向量维度不匹配');
+    }
+
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      const av = a[i];
+      const bv = b[i];
+      if (av !== undefined && bv !== undefined) {
+        sum += av * bv;
+      }
+    }
+    return sum;
+  }
+
+  /**
+   * 创建随机向量
+   * @param dimension 向量维度
+   * @param min 最小值
+   * @param max 最大值
+   * @returns 随机向量
+   */
+  public static createRandomVector(dimension: number, min: number = -1, max: number = 1): Float32Array {
+    const vector = new Float32Array(dimension);
+    for (let i = 0; i < dimension; i++) {
+      vector[i] = Math.random() * (max - min) + min;
+    }
+    return vector;
+  }
+
+  /**
+   * 创建零向量
+   * @param dimension 向量维度
+   * @returns 零向量
+   */
+  public static createZeroVector(dimension: number): Float32Array {
+    return new Float32Array(dimension);
+  }
+
+  /**
+   * 复制向量
+   * @param vector 源向量
+   * @returns 复制的向量
+   */
+  public static copyVector(vector: Float32Array): Float32Array {
+    return new Float32Array(vector);
+  }
+} 
