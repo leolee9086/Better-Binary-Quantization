@@ -167,11 +167,8 @@ describe('点积运算对比测试', () => {
     console.log('='.repeat(60));
     
     // 方法1: 位运算点积
-    const scorer = format.getScorer();
-    const transposedQuery = scorer['getTransposedQuery'](quantizedQuery);
-    
     const bitwiseStart = performance.now();
-    const bitwiseResult = computeInt4BitDotProduct(transposedQuery, unpackedBinaryCode);
+    const bitwiseResult = computeInt4BitDotProduct(quantizedQuery, unpackedBinaryCode);
     const bitwiseTime = performance.now() - bitwiseStart;
     
     console.log(`位运算点积:`);
@@ -251,12 +248,10 @@ describe('点积运算对比测试', () => {
     const { quantizedVectors: quantizedVectors4bit } = format4bit.quantizeVectors(vectors);
     const { quantizedQuery: quantizedQuery4bit } = format4bit.quantizeQueryVector(normalizedQuery, centroid);
     const unpackedBinaryCode4bit = quantizedVectors4bit.getUnpackedVector(0);
-    const scorer4bit = format4bit.getScorer();
-    const transposedQuery4bit = scorer4bit['getTransposedQuery'](quantizedQuery4bit);
     
     // 4bit位运算
     const start4bitBitwise = performance.now();
-    const result4bitBitwise = computeInt4BitDotProduct(transposedQuery4bit, unpackedBinaryCode4bit);
+    const result4bitBitwise = computeInt4BitDotProduct(quantizedQuery4bit, unpackedBinaryCode4bit);
     const time4bitBitwise = performance.now() - start4bitBitwise;
     
          // 4bit直接计算

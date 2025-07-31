@@ -170,17 +170,9 @@ describe('单个相似度计算步骤分解测试', () => {
     console.log(`步骤1 - 获取未打包索引向量: ${step1Time.toFixed(3)}ms`);
     console.log(`  向量长度: ${unpackedBinaryCode.length} 字节`);
     
-    // 步骤2: 获取转置的查询向量
-    const step2Start = performance.now();
-    const scorer = format.getScorer();
-    const transposedQuery = scorer['getTransposedQuery'](quantizedQuery);
-    const step2Time = performance.now() - step2Start;
-    console.log(`步骤2 - 获取转置查询向量: ${step2Time.toFixed(3)}ms`);
-    console.log(`  转置向量长度: ${transposedQuery.length} 字节`);
-    
     // 步骤3: 4bit点积计算
     const step3Start = performance.now();
-    const qcDist = computeInt4BitDotProduct(transposedQuery, unpackedBinaryCode);
+    const qcDist = computeInt4BitDotProduct(quantizedQuery, unpackedBinaryCode);
     const step3Time = performance.now() - step3Start;
     console.log(`步骤3 - 4bit点积计算: ${step3Time.toFixed(3)}ms`);
     console.log(`  点积结果: ${qcDist}`);
@@ -222,18 +214,17 @@ describe('单个相似度计算步骤分解测试', () => {
     console.log(`  最终分数: ${finalScore.toFixed(6)}`);
     
     // 总时间统计
-    const totalTime = step1Time + step2Time + step3Time + step4Time + step5Time + step6Time;
+    const totalTime = step1Time + step3Time + step4Time + step5Time + step6Time;
     console.log('\n📊 时间分布:');
     console.log(`总时间: ${totalTime.toFixed(3)}ms`);
     console.log(`步骤1 (向量获取): ${((step1Time / totalTime) * 100).toFixed(1)}%`);
-    console.log(`步骤2 (转置查询): ${((step2Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤3 (点积计算): ${((step3Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤4 (修正获取): ${((step4Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤5 (质心获取): ${((step5Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤6 (分数计算): ${((step6Time / totalTime) * 100).toFixed(1)}%`);
     
     // 验证结果
-    const expectedResult = scorer.computeQuantizedScore(
+    const expectedResult = format.getScorer().computeQuantizedScore(
       quantizedQuery,
       queryCorrections,
       quantizedVectors,
@@ -316,8 +307,7 @@ describe('单个相似度计算步骤分解测试', () => {
     // 4bit单步计算
     const start4bit = performance.now();
     const unpacked4bit = quantizedVectors4bit.getUnpackedVector(targetOrd);
-    const transposedQuery4bit = scorer4bit['getTransposedQuery'](quantizedQuery4bit);
-    const qcDist4bit = computeInt4BitDotProduct(transposedQuery4bit, unpacked4bit);
+    const qcDist4bit = computeInt4BitDotProduct(quantizedQuery4bit, unpacked4bit);
     const indexCorrections4bit = quantizedVectors4bit.getCorrectiveTerms(targetOrd);
     const centroidDP4bit = quantizedVectors4bit.getCentroidDP();
     

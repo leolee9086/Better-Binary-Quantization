@@ -16,7 +16,7 @@ import {
   computeInt4BitDotProduct
 } from './bitwiseDotProduct';
 import { computeSimilarity } from './vectorSimilarity';
-import { OptimizedScalarQuantizer } from './optimizedScalarQuantizer';
+
 
 /**
  * 缩放最大内积分数
@@ -44,60 +44,9 @@ export class BinaryQuantizedScorer {
    */
   constructor(similarityFunction: VectorSimilarityFunction) {
     this.similarityFunction = similarityFunction;
-    this.transposedQueryCache = new WeakMap();
-    this.cacheStats = { hits: 0, misses: 0 };
   }
 
-  /**
-   * 获取或计算转置的查询向量
-   * 直接使用数组作为键，消除隐式类型转换
-   * @param quantizedQuery 4位量化的查询向量
-   * @returns 转置后的查询向量
-   */
-  private getTransposedQuery(quantizedQuery: Uint8Array): Uint8Array {
-    // 直接使用数组作为键，无需字符串转换
-    const cached = this.transposedQueryCache.get(quantizedQuery);
-    if (cached) {
-      this.cacheStats.hits++;
-      return cached;
-    }
 
-    this.cacheStats.misses++;
-
-    // 计算转置 - 使用明确的类型和大小
-   // const planeSize: number = Math.ceil(quantizedQuery.length / 8);
-    const transposedSize: number = quantizedQuery.length * 4;
-    const transposedQuery = new Uint8Array(transposedSize);
-    
-    OptimizedScalarQuantizer.transposeHalfByteOptimized(quantizedQuery, transposedQuery, false);
-    
-    // 缓存结果 - WeakMap 会自动处理内存管理
-    this.transposedQueryCache.set(quantizedQuery, transposedQuery);
-
-    return transposedQuery;
-  }
-
-  /**
-   * 清除转置缓存
-   * WeakMap 无法直接清除，但可以通过重新创建来清空
-   */
-  public clearTransposedQueryCache(): void {
-    this.transposedQueryCache = new WeakMap();
-    this.cacheStats = { hits: 0, misses: 0 };
-  }
-
-  /**
-   * 获取缓存统计信息
-   * @returns 缓存命中率和统计信息
-   */
-  public getCacheStats(): { hits: number; misses: number; hitRate: number } {
-    const total = this.cacheStats.hits + this.cacheStats.misses;
-    const hitRate = total > 0 ? this.cacheStats.hits / total : 0;
-    return {
-      ...this.cacheStats,
-      hitRate
-    };
-  }
 
   /**
    * 计算量化相似性分数
@@ -317,9 +266,6 @@ export class BinaryQuantizedScorer {
   ): QuantizedScoreResult {
     // 2. 4位-1位点积计算（使用未打包的索引向量）
     const unpackedBinaryCode = targetVectors.getUnpackedVector(targetOrd);
-
-    // 获取或计算转置的查询向量
-    const transposedQuery = this.getTransposedQuery(quantizedQuery);
 
     // 计算点积
     const qcDist = computeInt4BitDotProduct(quantizedQuery, unpackedBinaryCode);

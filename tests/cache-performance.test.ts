@@ -55,12 +55,6 @@ describe('缓存性能测试', () => {
     
     console.log(`构建时间: ${buildTime.toFixed(2)}ms`);
     
-    // 获取评分器以访问缓存统计
-    const scorer = format.getScorer();
-    
-    // 清除缓存统计
-    scorer.clearTransposedQueryCache();
-    
     // 执行多次查询
     console.log(`\n🔍 执行${queryCount}次查询...`);
     const queryTimes: number[] = [];
@@ -75,9 +69,6 @@ describe('缓存性能测试', () => {
       console.log(`  查询${i + 1}: ${queryTime.toFixed(2)}ms`);
     }
     
-    // 获取缓存统计
-    const cacheStats = scorer.getCacheStats();
-    
     const avgQueryTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
     const minQueryTime = Math.min(...queryTimes);
     const maxQueryTime = Math.max(...queryTimes);
@@ -88,14 +79,7 @@ describe('缓存性能测试', () => {
     console.log(`最慢查询时间: ${maxQueryTime.toFixed(2)}ms`);
     console.log(`查询吞吐量: ${Math.round(1000 / avgQueryTime)} 查询/秒`);
     
-    console.log(`\n📊 缓存统计:`);
-    console.log(`缓存命中次数: ${cacheStats.hits}`);
-    console.log(`缓存未命中次数: ${cacheStats.misses}`);
-    console.log(`缓存命中率: ${(cacheStats.hitRate * 100).toFixed(1)}%`);
-    
     // 验证结果
-    expect(cacheStats.hits).toBeGreaterThan(0);
-    expect(cacheStats.hitRate).toBeGreaterThan(0.5); // 至少50%命中率
     expect(avgQueryTime).toBeLessThan(300); // 平均查询时间小于300ms
     
     console.log(`\n✅ 测试完成`);

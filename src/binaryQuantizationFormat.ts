@@ -274,7 +274,6 @@ export class BinaryQuantizationFormat {
   ): {
     quantizedQuery: Uint8Array;
     queryCorrections: QuantizationResult;
-    transposedQuery: Uint8Array;
   } {
     // 标准化查询向量（如果使用余弦相似度）
     const processedQueryVector = this.config.quantizer.similarityFunction === VectorSimilarityFunction.COSINE
@@ -284,7 +283,7 @@ export class BinaryQuantizationFormat {
     const dimension = processedQueryVector.length;
     const queryVectorCopy = new Float32Array(processedQueryVector);
 
-    // 1. 量化查询向量
+    // 量化查询向量
     const quantizedQuery = new Uint8Array(dimension);
     const queryCorrections = this.quantizer.scalarQuantize(
       queryVectorCopy,
@@ -293,25 +292,9 @@ export class BinaryQuantizationFormat {
       centroid
     );
 
-    // 2. 根据量化位数选择正确的处理方法
-    let transposedQuery: Uint8Array;
-    if (this.config.queryBits === 1) {
-      // 单比特量化：保持原始格式，不进行二进制打包
-      // 打包仅用于存储，计算点积时使用未打包格式
-      transposedQuery = quantizedQuery; // 直接使用量化结果，不打包
-    } else if (this.config.queryBits === 4) {
-      // 4位量化：保持原始格式，不进行转置
-      // 转置将在计算点积时进行，用于位运算加速
-      transposedQuery = quantizedQuery; // 直接使用量化结果，不转置
-    } else {
-      // 其他位数：直接使用量化结果
-      transposedQuery = quantizedQuery;
-    }
-
     return {
-      quantizedQuery: transposedQuery,
-      queryCorrections,
-      transposedQuery
+      quantizedQuery,
+      queryCorrections
     };
   }
 
