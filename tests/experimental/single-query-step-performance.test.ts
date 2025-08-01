@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
 
 /**
- * @织: 单步查询过程性能测试
+ * @�? 单步查询过程性能测试
  * 模拟单步查询过程，去掉索引构建时间，专注于查询本身的性能分析
  */
 
@@ -18,7 +18,7 @@ interface PerformancePoint {
   time: number;
   /** 开始时间戳 */
   startTime: number;
-  /** 结束时间戳 */
+  /** 结束时间�?*/
   endTime: number;
   /** 额外信息 */
   info?: Record<string, any>;
@@ -28,7 +28,7 @@ interface PerformancePoint {
  * 性能分析结果接口
  */
 interface PerformanceAnalysis {
-  /** 总执行时间 */
+  /** 总执行时�?*/
   totalTime: number;
   /** 各步骤性能记录 */
   steps: PerformancePoint[];
@@ -47,7 +47,7 @@ class QueryPerformanceProfiler {
   private stepStartTime: number = 0;
 
   /**
-   * 开始记录一个步骤
+   * 开始记录一个步�?
    */
   startStep(step: string): void {
     if (this.currentStep) {
@@ -89,7 +89,7 @@ class QueryPerformanceProfiler {
     });
     
     const bottlenecks = this.steps
-      .filter(step => (step.time / totalTime) > 0.1) // 超过10%的步骤
+      .filter(step => (step.time / totalTime) > 0.1) // 超过10%的步�?
       .sort((a, b) => b.time - a.time)
       .map(step => step.step);
     
@@ -102,7 +102,7 @@ class QueryPerformanceProfiler {
   }
 
   /**
-   * 重置分析器
+   * 重置分析�?
    */
   reset(): void {
     this.steps = [];
@@ -141,7 +141,7 @@ describe('单步查询过程性能测试', () => {
     profiler.endStep({ vectorCount: baseSize, dimension: dim });
     
     // 预构建量化索引（不计入查询时间）
-    profiler.startStep('预构建量化索引');
+    profiler.startStep('预构建量化索�?);
     const format = new BinaryQuantizationFormat({
       queryBits: 1,
       indexBits: 1,
@@ -155,7 +155,7 @@ describe('单步查询过程性能测试', () => {
     profiler.endStep();
     
     // 开始单步查询性能分析
-    profiler.startStep('查询向量标准化');
+    profiler.startStep('查询向量标准�?);
     const normalizedQuery = normalizeVector(queryVector);
     profiler.endStep();
     
@@ -170,7 +170,7 @@ describe('单步查询过程性能测试', () => {
       queryCorrectionsLength: queryCorrections.length 
     });
     
-    profiler.startStep('批量相似度计算');
+    profiler.startStep('批量相似度计�?);
     const vectorCount = quantizedVectors.size();
     const scores = new Float32Array(vectorCount);
     const batchSize = 1000;
@@ -206,7 +206,7 @@ describe('单步查询过程性能测试', () => {
       index: i
     }));
     
-    // 按分数降序排序并取前K个
+    // 按分数降序排序并取前K�?
     scoreIndexPairs.sort((a, b) => b.score - a.score);
     const topK = scoreIndexPairs.slice(0, K);
     profiler.endStep({ 
@@ -221,8 +221,8 @@ describe('单步查询过程性能测试', () => {
     // 输出详细结果
     console.log('\n🔍 1bit量化单步查询性能分析');
     console.log('='.repeat(50));
-    console.log(`总执行时间: ${analysis.totalTime.toFixed(2)}ms`);
-    console.log('\n📊 各步骤时间分布:');
+    console.log(`总执行时�? ${analysis.totalTime.toFixed(2)}ms`);
+    console.log('\n📊 各步骤时间分�?');
     analysis.steps.forEach(step => {
       const percentage = ((step.time / analysis.totalTime) * 100).toFixed(1);
       console.log(`  ${step.step}: ${step.time.toFixed(2)}ms (${percentage}%)`);
@@ -242,8 +242,8 @@ describe('单步查询过程性能测试', () => {
     
     console.log('\n📈 查询结果:');
     console.log(`  找到 ${topK.length} 个最相似向量`);
-    console.log(`  最高分数: ${topK[0]?.score.toFixed(4)}`);
-    console.log(`  最低分数: ${topK[topK.length - 1]?.score.toFixed(4)}`);
+    console.log(`  最高分�? ${topK[0]?.score.toFixed(4)}`);
+    console.log(`  最低分�? ${topK[topK.length - 1]?.score.toFixed(4)}`);
     
     // 验证结果
     expect(topK.length).toBe(K);
@@ -264,7 +264,7 @@ describe('单步查询过程性能测试', () => {
     profiler.endStep({ vectorCount: baseSize, dimension: dim });
     
     // 预构建量化索引（不计入查询时间）
-    profiler.startStep('预构建量化索引');
+    profiler.startStep('预构建量化索�?);
     const format = new BinaryQuantizationFormat({
       queryBits: 4,
       indexBits: 1,
@@ -278,7 +278,7 @@ describe('单步查询过程性能测试', () => {
     profiler.endStep();
     
     // 开始单步查询性能分析
-    profiler.startStep('查询向量标准化');
+    profiler.startStep('查询向量标准�?);
     const normalizedQuery = normalizeVector(queryVector);
     profiler.endStep();
     
@@ -293,7 +293,7 @@ describe('单步查询过程性能测试', () => {
       queryCorrectionsLength: queryCorrections.length 
     });
     
-    profiler.startStep('批量相似度计算');
+    profiler.startStep('批量相似度计�?);
     const vectorCount = quantizedVectors.size();
     const scores = new Float32Array(vectorCount);
     const batchSize = 1000;
@@ -329,7 +329,7 @@ describe('单步查询过程性能测试', () => {
       index: i
     }));
     
-    // 按分数降序排序并取前K个
+    // 按分数降序排序并取前K�?
     scoreIndexPairs.sort((a, b) => b.score - a.score);
     const topK = scoreIndexPairs.slice(0, K);
     profiler.endStep({ 
@@ -344,8 +344,8 @@ describe('单步查询过程性能测试', () => {
     // 输出详细结果
     console.log('\n🔍 4bit量化单步查询性能分析');
     console.log('='.repeat(50));
-    console.log(`总执行时间: ${analysis.totalTime.toFixed(2)}ms`);
-    console.log('\n📊 各步骤时间分布:');
+    console.log(`总执行时�? ${analysis.totalTime.toFixed(2)}ms`);
+    console.log('\n📊 各步骤时间分�?');
     analysis.steps.forEach(step => {
       const percentage = ((step.time / analysis.totalTime) * 100).toFixed(1);
       console.log(`  ${step.step}: ${step.time.toFixed(2)}ms (${percentage}%)`);
@@ -365,8 +365,8 @@ describe('单步查询过程性能测试', () => {
     
     console.log('\n📈 查询结果:');
     console.log(`  找到 ${topK.length} 个最相似向量`);
-    console.log(`  最高分数: ${topK[0]?.score.toFixed(4)}`);
-    console.log(`  最低分数: ${topK[topK.length - 1]?.score.toFixed(4)}`);
+    console.log(`  最高分�? ${topK[0]?.score.toFixed(4)}`);
+    console.log(`  最低分�? ${topK[topK.length - 1]?.score.toFixed(4)}`);
     
     // 验证结果
     expect(topK.length).toBe(K);
@@ -488,10 +488,10 @@ describe('单步查询过程性能测试', () => {
     console.log(`性能提升: ${(((time4bit - time1bit) / time4bit) * 100).toFixed(1)}%`);
     
     console.log('\n📊 分数对比:');
-    console.log(`1bit最高分数: ${topK1bit[0]?.score.toFixed(4)}`);
-    console.log(`4bit最高分数: ${topK4bit[0]?.score.toFixed(4)}`);
-    console.log(`1bit最低分数: ${topK1bit[topK1bit.length - 1]?.score.toFixed(4)}`);
-    console.log(`4bit最低分数: ${topK4bit[topK4bit.length - 1]?.score.toFixed(4)}`);
+    console.log(`1bit最高分�? ${topK1bit[0]?.score.toFixed(4)}`);
+    console.log(`4bit最高分�? ${topK4bit[0]?.score.toFixed(4)}`);
+    console.log(`1bit最低分�? ${topK1bit[topK1bit.length - 1]?.score.toFixed(4)}`);
+    console.log(`4bit最低分�? ${topK4bit[topK4bit.length - 1]?.score.toFixed(4)}`);
     
     // 验证结果
     expect(time1bit).toBeLessThan(time4bit);

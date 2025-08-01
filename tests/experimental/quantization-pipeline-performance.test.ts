@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
-import { computeCosineSimilarity } from '../src/vectorSimilarity';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
+import { computeCosineSimilarity } from '@src/vectorSimilarity';
 
 /**
- * @织: 量化查询流程性能测试
+ * @�? 量化查询流程性能测试
  * 重建整个量化查询流程，每一步都打点记录性能
  */
 
@@ -19,7 +19,7 @@ interface PerformancePoint {
   time: number;
   /** 开始时间戳 */
   startTime: number;
-  /** 结束时间戳 */
+  /** 结束时间�?*/
   endTime: number;
   /** 额外信息 */
   info?: Record<string, any>;
@@ -29,7 +29,7 @@ interface PerformancePoint {
  * 性能分析结果接口
  */
 interface PerformanceAnalysis {
-  /** 总执行时间 */
+  /** 总执行时�?*/
   totalTime: number;
   /** 各步骤性能记录 */
   steps: PerformancePoint[];
@@ -43,7 +43,7 @@ interface PerformanceAnalysis {
  * 生成测试向量
  * @param count 向量数量
  * @param dimension 向量维度
- * @returns 生成的测试向量数组
+ * @returns 生成的测试向量数�?
  */
 function generateVectors(count: number, dimension: number): Float32Array[] {
   const vectors: Float32Array[] = [];
@@ -66,7 +66,7 @@ class PerformanceProfiler {
   private stepStartTime: number = 0;
 
   /**
-   * 开始记录步骤
+   * 开始记录步�?
    * @param step 步骤名称
    * @param info 额外信息
    */
@@ -76,7 +76,7 @@ class PerformanceProfiler {
     }
     this.currentStep = step;
     this.stepStartTime = performance.now();
-    console.log(`🔍 开始步骤: ${step}`);
+    console.log(`🔍 开始步�? ${step}`);
     if (info) {
       console.log(`   信息:`, info);
     }
@@ -98,12 +98,12 @@ class PerformanceProfiler {
       endTime: endTime
     });
     
-    console.log(`✅ 完成步骤: ${this.currentStep} (${duration.toFixed(2)}ms)`);
+    console.log(`�?完成步骤: ${this.currentStep} (${duration.toFixed(2)}ms)`);
     this.currentStep = null;
   }
 
   /**
-   * 记录中间点
+   * 记录中间�?
    * @param step 步骤名称
    * @param info 额外信息
    */
@@ -116,7 +116,7 @@ class PerformanceProfiler {
       endTime: time,
       info
     });
-    console.log(`📍 记录点: ${step} (${time.toFixed(2)}ms)`);
+    console.log(`📍 记录�? ${step} (${time.toFixed(2)}ms)`);
     if (info) {
       console.log(`   信息:`, info);
     }
@@ -139,7 +139,7 @@ class PerformanceProfiler {
       }
     });
     
-    // 识别性能瓶颈（占用时间超过10%的步骤）
+    // 识别性能瓶颈（占用时间超�?0%的步骤）
     const bottlenecks = Object.entries(timeDistribution)
       .filter(([_, percentage]) => percentage > 10)
       .sort(([_, a], [__, b]) => b - a)
@@ -161,8 +161,8 @@ class PerformanceProfiler {
     
     console.log('\n📊 性能分析报告');
     console.log('='.repeat(50));
-    console.log(`总执行时间: ${analysis.totalTime.toFixed(2)}ms`);
-    console.log('\n📈 各步骤时间分布:');
+    console.log(`总执行时�? ${analysis.totalTime.toFixed(2)}ms`);
+    console.log('\n📈 各步骤时间分�?');
     
     Object.entries(analysis.timeDistribution)
       .sort(([_, a], [__, b]) => b - a)
@@ -256,8 +256,8 @@ describe('量化查询流程性能测试', () => {
       }
       profiler.endStep();
       
-      // 6. 批量相似度计算
-      profiler.startStep('批量相似度计算', { 
+      // 6. 批量相似度计�?
+      profiler.startStep('批量相似度计�?, { 
         targetCount: BASE_SIZE, 
         queryCount: QUERY_SIZE,
         batchSize: 1000 
@@ -325,7 +325,7 @@ describe('量化查询流程性能测试', () => {
         allResults.push(topKResults);
         const queryEnd = performance.now();
         
-        profiler.recordPoint('单查询完成', {
+        profiler.recordPoint('单查询完�?, {
           queryIndex: q,
           queryTime: queryEnd - queryStart
         });
@@ -415,8 +415,8 @@ describe('量化查询流程性能测试', () => {
       }
       profiler.endStep();
       
-      // 6. 批量相似度计算
-      profiler.startStep('批量相似度计算', { 
+      // 6. 批量相似度计�?
+      profiler.startStep('批量相似度计�?, { 
         targetCount: BASE_SIZE, 
         queryCount: QUERY_SIZE,
         batchSize: 1000 
@@ -484,7 +484,7 @@ describe('量化查询流程性能测试', () => {
         allResults.push(topKResults);
         const queryEnd = performance.now();
         
-        profiler.recordPoint('单查询完成', {
+        profiler.recordPoint('单查询完�?, {
           queryIndex: q,
           queryTime: queryEnd - queryStart
         });
@@ -517,7 +517,7 @@ describe('量化查询流程性能测试', () => {
   });
 
   describe('1bit vs 4bit性能对比', () => {
-    it('1bit和4bit量化查询性能对比', () => {
+    it('1bit�?bit量化查询性能对比', () => {
       const vectors = generateVectors(BASE_SIZE, DIMENSION);
       const queryVectors = generateVectors(QUERY_SIZE, DIMENSION);
       
@@ -585,8 +585,8 @@ describe('量化查询流程性能测试', () => {
       const speedup = time4bit / time1bit;
       
       console.log('\n📊 1bit vs 4bit性能对比:');
-      console.log(`1bit查询总时间: ${time1bit.toFixed(2)}ms`);
-      console.log(`4bit查询总时间: ${time4bit.toFixed(2)}ms`);
+      console.log(`1bit查询总时�? ${time1bit.toFixed(2)}ms`);
+      console.log(`4bit查询总时�? ${time4bit.toFixed(2)}ms`);
       console.log(`加速比: ${speedup.toFixed(2)}x`);
       console.log(`性能提升: ${((speedup - 1) * 100).toFixed(1)}%`);
       
@@ -598,7 +598,7 @@ describe('量化查询流程性能测试', () => {
       profiler4bit.printReport();
       
       // 性能断言
-      expect(speedup).toBeGreaterThan(1.0); // 4bit应该比1bit慢
+      expect(speedup).toBeGreaterThan(1.0); // 4bit应该�?bit�?
       expect(time1bit).toBeLessThan(time4bit); // 1bit应该更快
     });
   });

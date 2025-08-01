@@ -1,19 +1,17 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
 
 /**
- * @织: 1bit 量化, 4bit 查询性能瓶颈测试
- * 旨在测量在特定量化配置下，量化和查询阶段的性能，以找出潜在瓶颈。
- */
+ * @�? 1bit 量化, 4bit 查询性能瓶颈测试
+ * 旨在测量在特定量化配置下，量化和查询阶段的性能，以找出潜在瓶颈�? */
 
 /**
  * 生成测试向量
  * @param count 向量数量
  * @param dimension 向量维度
- * @returns 生成的测试向量数组
- */
+ * @returns 生成的测试向量数�? */
 function generateVectors(count: number, dimension: number): Float32Array[] {
   const vectors: Float32Array[] = [];
   for (let i = 0; i < count; i++) {
@@ -51,7 +49,7 @@ function measurePerformance<T>(name: string, fn: () => T, iterations: number = 1
   const totalTime = end - start;
   const avgTime = totalTime / iterations;
   
-  console.log(`📊 ${name}: ${avgTime.toFixed(2)}ms (${iterations}次迭代, 总计${totalTime.toFixed(2)}ms)`);
+  console.log(`📊 ${name}: ${avgTime.toFixed(2)}ms (${iterations}次迭�? 总计${totalTime.toFixed(2)}ms)`);
   
   return { result: result!, avgTime, totalTime };
 }
@@ -70,8 +68,7 @@ describe('1bit 量化, 4bit 查询性能瓶颈测试', () => {
     // 生成测试数据
     vectors = generateVectors(NUM_VECTORS, DIMENSION);
 
-    // 初始化量化格式
-    format = new BinaryQuantizationFormat({
+    // 初始化量化格�?    format = new BinaryQuantizationFormat({
       queryBits: 4,
       indexBits: 1,
       quantizer: {
@@ -99,17 +96,14 @@ describe('1bit 量化, 4bit 查询性能瓶颈测试', () => {
         for (let i = 0; i < NUM_QUERIES; i++) {
           format.searchNearestNeighbors(queryVectors[i]!, quantizedVectors, K);
         }
-        return null; // 返回 null 因为我们只关心时间
-      },
-      1 // 内部循环已经包含了多次查询
-    );
+        return null; // 返回 null 因为我们只关心时�?      },
+      1 // 内部循环已经包含了多次查�?    );
 
     console.log(`\n--- 1bit 量化, 4bit 查询性能分析 ---`);
     console.log(`维度: ${DIMENSION}, 向量数量: ${NUM_VECTORS}, 查询数量: ${NUM_QUERIES}, K: ${K}`);
     console.log(`平均每次查询时间: ${(searchPerformance.avgTime / NUM_QUERIES).toFixed(2)}ms`);
-    console.log(`查询吞吐量: ${Math.round(1000 / (searchPerformance.avgTime / NUM_QUERIES))} 查询/秒`);
+    console.log(`查询吞吐�? ${Math.round(1000 / (searchPerformance.avgTime / NUM_QUERIES))} 查询/秒`);
 
-    // 性能断言：确保在合理时间内完成
-    expect(searchPerformance.avgTime).toBeLessThan(NUM_QUERIES * 100); // 假设每个查询不超过100ms
+    // 性能断言：确保在合理时间内完�?    expect(searchPerformance.avgTime).toBeLessThan(NUM_QUERIES * 100); // 假设每个查询不超�?00ms
   });
 });

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
-import { computeCosineSimilarity } from '../src/vectorSimilarity';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
+import { computeCosineSimilarity } from '@src/vectorSimilarity';
 
 /**
  * 生成测试向量
@@ -84,22 +84,22 @@ describe('单次查询时间测试', () => {
     console.log(`\n📈 性能结果:`);
     console.log(`暴力查询时间: ${bruteForceTime.toFixed(2)}ms`);
     console.log(`量化查询时间: ${quantizedTime.toFixed(2)}ms`);
-    console.log(`暴力查询吞吐量: ${Math.round(1000 / bruteForceTime)} 查询/秒`);
-    console.log(`量化查询吞吐量: ${Math.round(1000 / quantizedTime)} 查询/秒`);
+    console.log(`暴力查询吞吐�? ${Math.round(1000 / bruteForceTime)} 查询/秒`);
+    console.log(`量化查询吞吐�? ${Math.round(1000 / quantizedTime)} 查询/秒`);
     
-    // 验证结果一致性
+    // 验证结果一致�?
     const bruteForceSet = new Set(bruteForceResults.map(r => r.index));
     const quantizedSet = new Set(quantizedResults.map(r => r.index));
     const intersection = new Set([...bruteForceSet].filter(x => quantizedSet.has(x)));
     const consistencyRate = intersection.size / k;
     
-    console.log(`\n📊 结果一致性: ${(consistencyRate * 100).toFixed(1)}%`);
+    console.log(`\n📊 结果一致�? ${(consistencyRate * 100).toFixed(1)}%`);
     
     // 验证结果
     expect(bruteForceResults.length).toBe(k);
     expect(quantizedResults.length).toBe(k);
-    expect(consistencyRate).toBeGreaterThanOrEqual(0.5); // 至少50%一致性
+    expect(consistencyRate).toBeGreaterThanOrEqual(0.5); // 至少50%一致�?
     
-    console.log(`\n✅ 测试完成`);
+    console.log(`\n�?测试完成`);
   });
 });

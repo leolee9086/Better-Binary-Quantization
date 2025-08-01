@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
-import { computeCosineSimilarity } from '../src/vectorSimilarity';
-import { getOversampledTopKWithHeap } from '../src/topKSelector';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
+import { computeCosineSimilarity } from '@src/vectorSimilarity';
+import { getOversampledTopKWithHeap } from '@src/topKSelector';
 
 /**
- * @织: 1024维向量单比特量化+4bit查询性能测试
+ * @�? 1024维向量单比特量化+4bit查询性能测试
  * 测试大规模高维向量的量化性能和查询性能
  */
 
@@ -24,7 +24,7 @@ interface OversampleResult {
   avgQueryTime: number;
 }
 
-// 生成1024维测试向量
+// 生成1024维测试向�?
 function generate1024DVectors(count: number): Float32Array[] {
   const vectors: Float32Array[] = [];
   for (let i = 0; i < count; i++) {
@@ -53,7 +53,7 @@ function measurePerformance(name: string, fn: () => any, iterations: number = 1)
   const avgTime = totalTime / iterations;
   
   // eslint-disable-next-line no-console
-  console.log(`📊 ${name}: ${avgTime.toFixed(2)}ms (${iterations}次迭代, 总计${totalTime.toFixed(2)}ms)`);
+  console.log(`📊 ${name}: ${avgTime.toFixed(2)}ms (${iterations}次迭�? 总计${totalTime.toFixed(2)}ms)`);
   
   return { result, avgTime, totalTime };
 }
@@ -63,31 +63,31 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
   const BASE_SIZES = [5000];
   const QUERY_SIZE = 100;
   const K = 10;
-  const OVERSAMPLE_FACTOR = 5; // 增加超采样因子到5倍
+  const OVERSAMPLE_FACTOR = 5; // 增加超采样因子到5�?
   
   // 生成测试数据
   const baseVectors = generate1024DVectors(Math.max(...BASE_SIZES));
   const queryVectors = generate1024DVectors(QUERY_SIZE);
   
-  // 构建量化器 - 单比特量化+4bit查询配置
+  // 构建量化�?- 单比特量�?4bit查询配置
   const format = new BinaryQuantizationFormat({
-    queryBits: 4, // 4位查询量化
-    indexBits: 1, // 1位索引量化
+    queryBits: 4, // 4位查询量�?
+    indexBits: 1, // 1位索引量�?
     quantizer: {
       similarityFunction: VectorSimilarityFunction.COSINE,
-      lambda: 0.01, // 减小lambda以提高精度
-      iters: 20 // 增加迭代次数以提高精度
+      lambda: 0.01, // 减小lambda以提高精�?
+      iters: 20 // 增加迭代次数以提高精�?
     }
   });
 
   describe('构建性能测试', () => {
     BASE_SIZES.forEach(baseSize => {
-      it(`构建 ${baseSize} 个1024维向量的量化索引`, () => {
+      it(`构建 ${baseSize} �?024维向量的量化索引`, () => {
         const vectors = baseVectors.slice(0, baseSize);
         
         // 测量构建时间
         const { result, avgTime } = measurePerformance(
-          `构建${baseSize}个1024维向量量化索引`,
+          `构建${baseSize}�?024维向量量化索引`,
           () => format.quantizeVectors(vectors)
         );
         
@@ -100,20 +100,20 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         // eslint-disable-next-line no-console
         console.log(`  构建速度: ${buildSpeed} 向量/秒`);
         // eslint-disable-next-line no-console
-        console.log(`  压缩比: 32:1 (1024维 × 4字节 → 128字节)`);
+        console.log(`  压缩�? 32:1 (1024�?× 4字节 �?128字节)`);
         // eslint-disable-next-line no-console
-        console.log(`  压缩后大小: ${(1024 * 4 / 32).toFixed(0)} 字节/向量`);
+        console.log(`  压缩后大�? ${(1024 * 4 / 32).toFixed(0)} 字节/向量`);
         
         // 性能断言
         expect(avgTime).toBeLessThan(10000); // 10秒内完成
-        expect(buildSpeed).toBeGreaterThan(100); // 至少100向量/秒
+        expect(buildSpeed).toBeGreaterThan(100); // 至少100向量/�?
       });
     });
   });
 
   describe('查询性能测试', () => {
     BASE_SIZES.forEach(baseSize => {
-      it(`查询 ${baseSize} 个1024维向量的性能`, () => {
+      it(`查询 ${baseSize} �?024维向量的性能`, () => {
         const vectors = baseVectors.slice(0, baseSize);
         
         // 构建量化索引
@@ -121,7 +121,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         
         // 测量查询时间
         const queryTimes: number[] = [];
-        for (let i = 0; i < 10; i++) { // 测试10次查询
+        for (let i = 0; i < 10; i++) { // 测试10次查�?
           const query = queryVectors[i % queryVectors.length];
           if (!query) continue;
           const start = performance.now();
@@ -135,26 +135,26 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         const maxQueryTime = Math.max(...queryTimes);
         
         // eslint-disable-next-line no-console
-        console.log(`📊 查询${baseSize}个1024维向量:`);
+        console.log(`📊 查询${baseSize}�?024维向�?`);
         // eslint-disable-next-line no-console
         console.log(`  平均查询时间: ${avgQueryTime.toFixed(2)}ms`);
         // eslint-disable-next-line no-console
-        console.log(`  最快查询时间: ${minQueryTime.toFixed(2)}ms`);
+        console.log(`  最快查询时�? ${minQueryTime.toFixed(2)}ms`);
         // eslint-disable-next-line no-console
-        console.log(`  最慢查询时间: ${maxQueryTime.toFixed(2)}ms`);
+        console.log(`  最慢查询时�? ${maxQueryTime.toFixed(2)}ms`);
         // eslint-disable-next-line no-console
-        console.log(`  查询吞吐量: ${Math.round(1000 / avgQueryTime)} 查询/秒`);
+        console.log(`  查询吞吐�? ${Math.round(1000 / avgQueryTime)} 查询/秒`);
         
         // 性能断言
         expect(avgQueryTime).toBeLessThan(100); // 平均查询时间小于100ms
-        expect(minQueryTime).toBeLessThan(50);   // 最快查询时间小于50ms
+        expect(minQueryTime).toBeLessThan(50);   // 最快查询时间小�?0ms
       });
     });
   });
 
-  describe('召回率测试', () => {
-    it('1024维向量的召回率测试', () => {
-      const baseSize = 10000; // 使用1万个向量测试召回率
+  describe('召回率测�?, () => {
+    it('1024维向量的召回率测�?, () => {
+      const baseSize = 10000; // 使用1万个向量测试召回�?
       const vectors = baseVectors.slice(0, baseSize);
       
       // 构建量化索引
@@ -162,7 +162,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       
       // 计算真实topK
       const trueTopK: number[][] = [];
-      for (let i = 0; i < 10; i++) { // 测试10个查询
+      for (let i = 0; i < 10; i++) { // 测试10个查�?
         const query = queryVectors[i];
         if (!query) continue;
         const similarities = vectors.map((vector, index) => ({
@@ -173,7 +173,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         trueTopK.push(similarities.slice(0, K).map(x => x.index));
       }
       
-      // 计算量化topK（使用最小堆优化）
+      // 计算量化topK（使用最小堆优化�?
       const quantizedTopK: number[][] = [];
       for (let i = 0; i < 10; i++) {
         const query = queryVectors[i];
@@ -185,14 +185,14 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         
         // 输出调试信息
         // eslint-disable-next-line no-console
-        console.log(`\n超采样查询#${i} (最小堆优化):`);
+        console.log(`\n超采样查�?${i} (最小堆优化):`);
         // eslint-disable-next-line no-console
         console.log(`  量化分数: [${topKCandidates.map(r => r.quantizedScore.toFixed(3)).join(', ')}]`);
         // eslint-disable-next-line no-console
         console.log(`  真实分数: [${topKCandidates.map(r => r.trueScore.toFixed(3)).join(', ')}]`);
       }
       
-      // 计算召回率
+      // 计算召回�?
       let totalRecall = 0;
       for (let i = 0; i < 10; i++) {
         const trueSet = new Set(trueTopK[i]);
@@ -206,15 +206,15 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       // eslint-disable-next-line no-console
       console.log(`📊 1024维向量召回率测试:`);
       // eslint-disable-next-line no-console
-      console.log(`  平均召回率: ${avgRecall.toFixed(3)} (${(avgRecall * 100).toFixed(1)}%)`);
+      console.log(`  平均召回�? ${avgRecall.toFixed(3)} (${(avgRecall * 100).toFixed(1)}%)`);
       // eslint-disable-next-line no-console
-      console.log(`  测试规模: ${baseSize} 个1024维向量`);
+      console.log(`  测试规模: ${baseSize} �?024维向量`);
       // eslint-disable-next-line no-console
       console.log(`  查询数量: 10 个`);
       // eslint-disable-next-line no-console
       console.log(`  TopK: ${K}`);
       // eslint-disable-next-line no-console
-      console.log(`  超采样因子: ${OVERSAMPLE_FACTOR}`);
+      console.log(`  超采样因�? ${OVERSAMPLE_FACTOR}`);
       
       // 召回率断言
       expect(avgRecall).toBeGreaterThan(0.6); // 召回率应大于60%
@@ -222,8 +222,8 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
   });
 
   describe('不同超采样因子性能对比测试', () => {
-    it('测试不同超采样因子对召回率和查询性能的影响', () => {
-      const baseSize = 5000; // 使用5000个向量进行对比测试
+    it('测试不同超采样因子对召回率和查询性能的影�?, () => {
+      const baseSize = 5000; // 使用5000个向量进行对比测�?
       const vectors = baseVectors.slice(0, baseSize);
       
       // 构建量化索引
@@ -231,7 +231,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       
       // 计算真实topK
       const trueTopK: number[][] = [];
-      for (let i = 0; i < 5; i++) { // 测试5个查询
+      for (let i = 0; i < 5; i++) { // 测试5个查�?
         const query = queryVectors[i];
         if (!query) continue;
         const similarities = vectors.map((vector, index) => ({
@@ -249,7 +249,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       for (const factor of oversampleFactors) {
         const startTime = performance.now();
         
-        // 计算量化topK（使用最小堆优化）
+        // 计算量化topK（使用最小堆优化�?
         const quantizedTopK: number[][] = [];
         for (let i = 0; i < 5; i++) {
           const query = queryVectors[i];
@@ -263,7 +263,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
         const endTime = performance.now();
         const queryTime = endTime - startTime;
         
-        // 计算召回率
+        // 计算召回�?
         let totalRecall = 0;
         for (let i = 0; i < 5; i++) {
           const trueSet = new Set(trueTopK[i]);
@@ -286,17 +286,17 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       // eslint-disable-next-line no-console
       console.log(`\n📊 不同超采样因子性能对比:`);
       // eslint-disable-next-line no-console
-      console.log(`测试规模: ${baseSize} 个1024维向量, 查询数量: 5个, TopK: ${K}`);
+      console.log(`测试规模: ${baseSize} �?024维向�? 查询数量: 5�? TopK: ${K}`);
       // eslint-disable-next-line no-console
       console.log(`┌─────────────┬──────────┬──────────────┬─────────────────┐`);
       // eslint-disable-next-line no-console
-      console.log(`│ 超采样因子  │ 召回率   │ 总查询时间   │ 平均查询时间    │`);
+      console.log(`�?超采样因�? �?召回�?  �?总查询时�?  �?平均查询时间    │`);
       // eslint-disable-next-line no-console
       console.log(`├─────────────┼──────────┼──────────────┼─────────────────┤`);
       
       results.forEach(result => {
         // eslint-disable-next-line no-console
-        console.log(`│ ${result.factor.toString().padStart(11)} │ ${(result.recall * 100).toFixed(1).padStart(8)}% │ ${result.queryTime.toFixed(2).padStart(12)}ms │ ${result.avgQueryTime.toFixed(2).padStart(15)}ms │`);
+        console.log(`�?${result.factor.toString().padStart(11)} �?${(result.recall * 100).toFixed(1).padStart(8)}% �?${result.queryTime.toFixed(2).padStart(12)}ms �?${result.avgQueryTime.toFixed(2).padStart(15)}ms │`);
       });
       
       // eslint-disable-next-line no-console
@@ -311,21 +311,21 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       // eslint-disable-next-line no-console
       console.log(`\n📈 性能分析:`);
       // eslint-disable-next-line no-console
-      console.log(`最高召回率: ${(bestRecall * 100).toFixed(1)}% (超采样因子: ${bestRecallResult?.factor})`);
+      console.log(`最高召回率: ${(bestRecall * 100).toFixed(1)}% (超采样因�? ${bestRecallResult?.factor})`);
       // eslint-disable-next-line no-console
-      console.log(`最快查询: ${fastestQuery.toFixed(2)}ms (超采样因子: ${fastestResult?.factor})`);
+      console.log(`最快查�? ${fastestQuery.toFixed(2)}ms (超采样因�? ${fastestResult?.factor})`);
       
-      // 找到召回率≥90%的最快配置
+      // 找到召回率≥90%的最快配�?
       const highRecallResults = results.filter(r => r.recall >= 0.9);
       if (highRecallResults.length > 0) {
         const optimalResult = highRecallResults.reduce((min, current) => 
           current.avgQueryTime < min.avgQueryTime ? current : min
         );
         // eslint-disable-next-line no-console
-        console.log(`推荐配置: 超采样因子 ${optimalResult.factor} (召回率: ${(optimalResult.recall * 100).toFixed(1)}%, 查询时间: ${optimalResult.avgQueryTime.toFixed(2)}ms)`);
+        console.log(`推荐配置: 超采样因�?${optimalResult.factor} (召回�? ${(optimalResult.recall * 100).toFixed(1)}%, 查询时间: ${optimalResult.avgQueryTime.toFixed(2)}ms)`);
       }
       
-      // 断言：至少有一个配置能达到90%召回率
+      // 断言：至少有一个配置能达到90%召回�?
       expect(bestRecall).toBeGreaterThan(0.85);
     });
   });
@@ -405,7 +405,7 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       // eslint-disable-next-line no-console
       console.log(`时间节省: ${(originalTime.avgTime - heapTime.avgTime).toFixed(2)}ms`);
       
-      // 验证结果一致性
+      // 验证结果一致�?
       const originalResults = originalMethod();
       const heapResults = heapMethod();
       
@@ -420,11 +420,11 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       }
       
       // eslint-disable-next-line no-console
-      console.log(`结果一致性: ${consistencyCount}/3 个查询完全一致`);
+      console.log(`结果一致�? ${consistencyCount}/3 个查询完全一致`);
       
       // 性能断言
-      expect(heapTime.avgTime).toBeLessThan(originalTime.avgTime * 1.2); // 堆方法不应比排序方法慢20%以上
-      expect(performanceImprovement).toBeGreaterThan(-20); // 允许最多20%的性能下降
+      expect(heapTime.avgTime).toBeLessThan(originalTime.avgTime * 1.2); // 堆方法不应比排序方法�?0%以上
+      expect(performanceImprovement).toBeGreaterThan(-20); // 允许最�?0%的性能下降
     });
   });
 
@@ -434,29 +434,29 @@ describe('1024维向量单比特量化+4bit查询性能测试', () => {
       const vectors = baseVectors.slice(0, baseSize);
       
       // 测量原始内存使用
-      const originalMemory = baseSize * DIM * 4; // 4字节/浮点数
+      const originalMemory = baseSize * DIM * 4; // 4字节/浮点�?
       
       // 构建量化索引
       const { quantizedVectors } = format.quantizeVectors(vectors);
       
-      // 测量量化后内存使用
-      // 4位量化：每个向量占用 DIM/2 字节（4位 = 0.5字节）
-      const quantizedMemory = quantizedVectors.size() * (DIM / 2); // 4位 = 1/2字节
+      // 测量量化后内存使�?
+      // 4位量化：每个向量占用 DIM/2 字节�?�?= 0.5字节�?
+      const quantizedMemory = quantizedVectors.size() * (DIM / 2); // 4�?= 1/2字节
       
       // eslint-disable-next-line no-console
-      console.log(`📊 1024维向量内存使用分析:`);
+      console.log(`📊 1024维向量内存使用分�?`);
       // eslint-disable-next-line no-console
       console.log(`  原始内存: ${(originalMemory / 1024 / 1024).toFixed(2)} MB`);
       // eslint-disable-next-line no-console
       console.log(`  量化内存: ${(quantizedMemory / 1024 / 1024).toFixed(2)} MB`);
       // eslint-disable-next-line no-console
-      console.log(`  压缩比: ${(originalMemory / quantizedMemory).toFixed(1)}:1`);
+      console.log(`  压缩�? ${(originalMemory / quantizedMemory).toFixed(1)}:1`);
       // eslint-disable-next-line no-console
       console.log(`  内存节省: ${((1 - quantizedMemory / originalMemory) * 100).toFixed(1)}%`);
       // eslint-disable-next-line no-console
-      console.log(`  每向量原始大小: ${(DIM * 4).toFixed(0)} 字节`);
+      console.log(`  每向量原始大�? ${(DIM * 4).toFixed(0)} 字节`);
       // eslint-disable-next-line no-console
-      console.log(`  每向量量化大小: ${(DIM / 2).toFixed(0)} 字节`);
+      console.log(`  每向量量化大�? ${(DIM / 2).toFixed(0)} 字节`);
       
       // 内存使用断言
       expect(quantizedMemory).toBeLessThanOrEqual(originalMemory / 8); // 至少8倍压缩（4位量化）

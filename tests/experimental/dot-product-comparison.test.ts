@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
-import { computeInt1BitDotProduct, computeInt4BitDotProduct } from '../src/bitwiseDotProduct';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
+import { computeInt1BitDotProduct, computeInt4BitDotProduct } from '@src/bitwiseDotProduct';
 
 /**
- * @织: 点积运算对比测试
+ * @�? 点积运算对比测试
  * 对比位运算点积与直接用量化向量算点积的性能
  */
 
@@ -25,8 +25,7 @@ function generateVectors(count: number, dimension: number): Float32Array[] {
 }
 
 /**
- * 直接用量化向量计算点积（暴力方法）
- */
+ * 直接用量化向量计算点积（暴力方法�? */
 function computeDirectDotProductSimple(q: Uint8Array, d: Uint8Array): number {
   let sum = 0;
   for (let i = 0; i < q.length; i++) {
@@ -36,15 +35,13 @@ function computeDirectDotProductSimple(q: Uint8Array, d: Uint8Array): number {
 }
 
 /**
- * 八路展开循环计算点积（Duff's Device优化）
- */
+ * 八路展开循环计算点积（Duff's Device优化�? */
 function computeDirectDotProduct(q: Uint8Array, d: Uint8Array): number {
   let sum = 0;
   const len = q.length;
   let i = 0;
   
-  // 处理不能被8整除的部分
-  const remainder = len % 8;
+  // 处理不能�?整除的部�?  const remainder = len % 8;
   switch (remainder) {
     case 7: sum += q[i]! * d[i]!; i++;
     case 6: sum += q[i]! * d[i]!; i++;
@@ -55,8 +52,7 @@ function computeDirectDotProduct(q: Uint8Array, d: Uint8Array): number {
     case 1: sum += q[i]! * d[i]!; i++;
   }
   
-  // 八路展开主循环
-  for (; i < len; i += 8) {
+  // 八路展开主循�?  for (; i < len; i += 8) {
     sum += q[i]! * d[i]!;
     sum += q[i + 1]! * d[i + 1]!;
     sum += q[i + 2]! * d[i + 2]!;
@@ -95,19 +91,17 @@ describe('点积运算对比测试', () => {
     const centroid = quantizedVectors.getCentroid();
     const { quantizedQuery, queryCorrections } = format.quantizeQueryVector(normalizedQuery, centroid);
     
-    // 选择第一个向量进行测试
-    const targetOrd = 0;
+    // 选择第一个向量进行测�?    const targetOrd = 0;
     const unpackedBinaryCode = quantizedVectors.getUnpackedVector(targetOrd);
     
     console.log('\n🔍 1bit量化点积对比：位运算 vs 直接计算');
     console.log('='.repeat(60));
     
-    // 方法1: 位运算点积
-    const bitwiseStart = performance.now();
+    // 方法1: 位运算点�?    const bitwiseStart = performance.now();
     const bitwiseResult = computeInt1BitDotProduct(quantizedQuery, unpackedBinaryCode);
     const bitwiseTime = performance.now() - bitwiseStart;
     
-    console.log(`位运算点积:`);
+    console.log(`位运算点�?`);
     console.log(`  结果: ${bitwiseResult}`);
     console.log(`  时间: ${bitwiseTime.toFixed(3)}ms`);
     
@@ -127,7 +121,7 @@ describe('点积运算对比测试', () => {
     
     // 结果对比
     console.log(`\n📊 结果对比:`);
-    console.log(`位运算结果: ${bitwiseResult}`);
+    console.log(`位运算结�? ${bitwiseResult}`);
     console.log(`直接计算结果: ${directResult.toFixed(6)}`);
     console.log(`结果差异: ${Math.abs(bitwiseResult - directResult).toFixed(6)}`);
     
@@ -159,19 +153,17 @@ describe('点积运算对比测试', () => {
     const centroid = quantizedVectors.getCentroid();
     const { quantizedQuery, queryCorrections } = format.quantizeQueryVector(normalizedQuery, centroid);
     
-    // 选择第一个向量进行测试
-    const targetOrd = 0;
+    // 选择第一个向量进行测�?    const targetOrd = 0;
     const unpackedBinaryCode = quantizedVectors.getUnpackedVector(targetOrd);
     
     console.log('\n🔍 4bit量化点积对比：位运算 vs 直接计算');
     console.log('='.repeat(60));
     
-    // 方法1: 位运算点积
-    const bitwiseStart = performance.now();
+    // 方法1: 位运算点�?    const bitwiseStart = performance.now();
     const bitwiseResult = computeInt4BitDotProduct(quantizedQuery, unpackedBinaryCode);
     const bitwiseTime = performance.now() - bitwiseStart;
     
-    console.log(`位运算点积:`);
+    console.log(`位运算点�?`);
     console.log(`  结果: ${bitwiseResult}`);
     console.log(`  时间: ${bitwiseTime.toFixed(3)}ms`);
     
@@ -191,7 +183,7 @@ describe('点积运算对比测试', () => {
     
     // 结果对比
     console.log(`\n📊 结果对比:`);
-    console.log(`位运算结果: ${bitwiseResult}`);
+    console.log(`位运算结�? ${bitwiseResult}`);
     console.log(`直接计算结果: ${directResult.toFixed(6)}`);
     console.log(`结果差异: ${Math.abs(bitwiseResult - directResult).toFixed(6)}`);
     
@@ -225,8 +217,7 @@ describe('点积运算对比测试', () => {
     const { quantizedQuery: quantizedQuery1bit } = format1bit.quantizeQueryVector(normalizedQuery, centroid);
     const unpackedBinaryCode1bit = quantizedVectors1bit.getUnpackedVector(0);
     
-    // 1bit位运算
-    const start1bitBitwise = performance.now();
+    // 1bit位运�?    const start1bitBitwise = performance.now();
     const result1bitBitwise = computeInt1BitDotProduct(quantizedQuery1bit, unpackedBinaryCode1bit);
     const time1bitBitwise = performance.now() - start1bitBitwise;
     
@@ -249,8 +240,7 @@ describe('点积运算对比测试', () => {
     const { quantizedQuery: quantizedQuery4bit } = format4bit.quantizeQueryVector(normalizedQuery, centroid);
     const unpackedBinaryCode4bit = quantizedVectors4bit.getUnpackedVector(0);
     
-    // 4bit位运算
-    const start4bitBitwise = performance.now();
+    // 4bit位运�?    const start4bitBitwise = performance.now();
     const result4bitBitwise = computeInt4BitDotProduct(quantizedQuery4bit, unpackedBinaryCode4bit);
     const time4bitBitwise = performance.now() - start4bitBitwise;
     
@@ -260,15 +250,15 @@ describe('点积运算对比测试', () => {
      const time4bitDirect = performance.now() - start4bitDirect;
     
     // 输出结果
-    console.log(`1bit位运算: ${time1bitBitwise.toFixed(3)}ms (结果: ${result1bitBitwise})`);
+    console.log(`1bit位运�? ${time1bitBitwise.toFixed(3)}ms (结果: ${result1bitBitwise})`);
     console.log(`1bit直接计算: ${time1bitDirect.toFixed(3)}ms (结果: ${result1bitDirect.toFixed(6)})`);
-    console.log(`4bit位运算: ${time4bitBitwise.toFixed(3)}ms (结果: ${result4bitBitwise})`);
+    console.log(`4bit位运�? ${time4bitBitwise.toFixed(3)}ms (结果: ${result4bitBitwise})`);
     console.log(`4bit直接计算: ${time4bitDirect.toFixed(3)}ms (结果: ${result4bitDirect.toFixed(6)})`);
     
     console.log(`\n📊 性能对比:`);
-    console.log(`1bit位运算 vs 1bit直接计算: ${(time1bitDirect / time1bitBitwise).toFixed(2)}x`);
-    console.log(`4bit位运算 vs 4bit直接计算: ${(time4bitDirect / time4bitBitwise).toFixed(2)}x`);
-    console.log(`1bit位运算 vs 4bit位运算: ${(time4bitBitwise / time1bitBitwise).toFixed(2)}x`);
+    console.log(`1bit位运�?vs 1bit直接计算: ${(time1bitDirect / time1bitBitwise).toFixed(2)}x`);
+    console.log(`4bit位运�?vs 4bit直接计算: ${(time4bitDirect / time4bitBitwise).toFixed(2)}x`);
+    console.log(`1bit位运�?vs 4bit位运�? ${(time4bitBitwise / time1bitBitwise).toFixed(2)}x`);
     console.log(`1bit直接计算 vs 4bit直接计算: ${(time4bitDirect / time1bitDirect).toFixed(2)}x`);
     
     // 验证结果

@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
-import { computeInt1BitDotProduct, computeInt4BitDotProduct } from '../src/bitwiseDotProduct';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
+import { computeInt1BitDotProduct, computeInt4BitDotProduct } from '@src/bitwiseDotProduct';
 
 /**
- * @织: 单个相似度计算步骤分解测试
- * 分解单个相似度计算的内部步骤并计时
- */
+ * @�? 单个相似度计算步骤分解测�? * 分解单个相似度计算的内部步骤并计�? */
 
 /**
  * 生成测试向量
@@ -24,8 +22,8 @@ function generateVectors(count: number, dimension: number): Float32Array[] {
   return vectors;
 }
 
-describe('单个相似度计算步骤分解测试', () => {
-  it('1bit量化单个相似度计算步骤分解', () => {
+describe('单个相似度计算步骤分解测�?, () => {
+  it('1bit量化单个相似度计算步骤分�?, () => {
     // 测试参数
     const dim = 1024;
     const baseSize = 100;
@@ -49,17 +47,16 @@ describe('单个相似度计算步骤分解测试', () => {
     const centroid = quantizedVectors.getCentroid();
     const { quantizedQuery, queryCorrections } = format.quantizeQueryVector(normalizedQuery, centroid);
     
-    // 选择第一个向量进行测试
-    const targetOrd = 0;
+    // 选择第一个向量进行测�?    const targetOrd = 0;
     
-    console.log('\n🔍 1bit量化单个相似度计算步骤分解');
+    console.log('\n🔍 1bit量化单个相似度计算步骤分�?);
     console.log('='.repeat(60));
     
     // 步骤1: 获取未打包的索引向量
     const step1Start = performance.now();
     const unpackedBinaryCode = quantizedVectors.getUnpackedVector(targetOrd);
     const step1Time = performance.now() - step1Start;
-    console.log(`步骤1 - 获取未打包索引向量: ${step1Time.toFixed(3)}ms`);
+    console.log(`步骤1 - 获取未打包索引向�? ${step1Time.toFixed(3)}ms`);
     console.log(`  向量长度: ${unpackedBinaryCode.length} 字节`);
     
     // 步骤2: 1bit点积计算
@@ -83,8 +80,7 @@ describe('单个相似度计算步骤分解测试', () => {
     console.log(`步骤4 - 获取质心点积: ${step4Time.toFixed(3)}ms`);
     console.log(`  质心点积: ${centroidDP}`);
     
-    // 步骤5: 相似度分数计算（四项公式）
-    const step5Start = performance.now();
+    // 步骤5: 相似度分数计算（四项公式�?    const step5Start = performance.now();
     
     // 手动实现四项公式计算
     const x1 = indexCorrections.quantizedComponentSum;
@@ -97,18 +93,16 @@ describe('单个相似度计算步骤分解测试', () => {
     // 四项公式：score = ax * ay * dimension + ay * lx * x1 + ax * ly * y1 + lx * ly * qcDist
     let score = ax * ay * dim + ay * lx * x1 + ax * ly * y1 + lx * ly * qcDist;
     
-    // 余弦相似度调整
-    score += queryCorrections.additionalCorrection + indexCorrections.additionalCorrection - centroidDP;
+    // 余弦相似度调�?    score += queryCorrections.additionalCorrection + indexCorrections.additionalCorrection - centroidDP;
     const finalScore = Math.max((1 + score) / 2, 0);
     
     const step5Time = performance.now() - step5Start;
-    console.log(`步骤5 - 相似度分数计算: ${step5Time.toFixed(3)}ms`);
-    console.log(`  最终分数: ${finalScore.toFixed(6)}`);
+    console.log(`步骤5 - 相似度分数计�? ${step5Time.toFixed(3)}ms`);
+    console.log(`  最终分�? ${finalScore.toFixed(6)}`);
     
-    // 总时间统计
-    const totalTime = step1Time + step2Time + step3Time + step4Time + step5Time;
+    // 总时间统�?    const totalTime = step1Time + step2Time + step3Time + step4Time + step5Time;
     console.log('\n📊 时间分布:');
-    console.log(`总时间: ${totalTime.toFixed(3)}ms`);
+    console.log(`总时�? ${totalTime.toFixed(3)}ms`);
     console.log(`步骤1 (向量获取): ${((step1Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤2 (点积计算): ${((step2Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤3 (修正获取): ${((step3Time / totalTime) * 100).toFixed(1)}%`);
@@ -125,7 +119,7 @@ describe('单个相似度计算步骤分解测试', () => {
       1
     );
     
-    console.log(`\n✅ 验证结果:`);
+    console.log(`\n�?验证结果:`);
     console.log(`期望分数: ${expectedResult.score.toFixed(6)}`);
     console.log(`计算分数: ${finalScore.toFixed(6)}`);
     console.log(`差异: ${Math.abs(expectedResult.score - finalScore).toFixed(8)}`);
@@ -133,7 +127,7 @@ describe('单个相似度计算步骤分解测试', () => {
     expect(Math.abs(expectedResult.score - finalScore)).toBeLessThan(1e-6);
   });
 
-  it('4bit量化单个相似度计算步骤分解', () => {
+  it('4bit量化单个相似度计算步骤分�?, () => {
     // 测试参数
     const dim = 1024;
     const baseSize = 100;
@@ -157,17 +151,16 @@ describe('单个相似度计算步骤分解测试', () => {
     const centroid = quantizedVectors.getCentroid();
     const { quantizedQuery, queryCorrections } = format.quantizeQueryVector(normalizedQuery, centroid);
     
-    // 选择第一个向量进行测试
-    const targetOrd = 0;
+    // 选择第一个向量进行测�?    const targetOrd = 0;
     
-    console.log('\n🔍 4bit量化单个相似度计算步骤分解');
+    console.log('\n🔍 4bit量化单个相似度计算步骤分�?);
     console.log('='.repeat(60));
     
     // 步骤1: 获取未打包的索引向量
     const step1Start = performance.now();
     const unpackedBinaryCode = quantizedVectors.getUnpackedVector(targetOrd);
     const step1Time = performance.now() - step1Start;
-    console.log(`步骤1 - 获取未打包索引向量: ${step1Time.toFixed(3)}ms`);
+    console.log(`步骤1 - 获取未打包索引向�? ${step1Time.toFixed(3)}ms`);
     console.log(`  向量长度: ${unpackedBinaryCode.length} 字节`);
     
     // 步骤3: 4bit点积计算
@@ -191,11 +184,9 @@ describe('单个相似度计算步骤分解测试', () => {
     console.log(`步骤5 - 获取质心点积: ${step5Time.toFixed(3)}ms`);
     console.log(`  质心点积: ${centroidDP}`);
     
-    // 步骤6: 相似度分数计算（四项公式）
-    const step6Start = performance.now();
+    // 步骤6: 相似度分数计算（四项公式�?    const step6Start = performance.now();
     
-    // 手动实现四项公式计算（4bit版本）
-    const x1 = indexCorrections.quantizedComponentSum;
+    // 手动实现四项公式计算�?bit版本�?    const x1 = indexCorrections.quantizedComponentSum;
     const ax = indexCorrections.lowerInterval;
     const lx = indexCorrections.upperInterval - ax;
     const ay = queryCorrections.lowerInterval;
@@ -205,18 +196,16 @@ describe('单个相似度计算步骤分解测试', () => {
     // 四项公式：score = ax * ay * dimension + ay * lx * x1 + ax * ly * y1 + lx * ly * qcDist
     let score = ax * ay * dim + ay * lx * x1 + ax * ly * y1 + lx * ly * qcDist;
     
-    // 余弦相似度调整
-    score += queryCorrections.additionalCorrection + indexCorrections.additionalCorrection - centroidDP;
+    // 余弦相似度调�?    score += queryCorrections.additionalCorrection + indexCorrections.additionalCorrection - centroidDP;
     const finalScore = Math.max((1 + score) / 2, 0);
     
     const step6Time = performance.now() - step6Start;
-    console.log(`步骤6 - 相似度分数计算: ${step6Time.toFixed(3)}ms`);
-    console.log(`  最终分数: ${finalScore.toFixed(6)}`);
+    console.log(`步骤6 - 相似度分数计�? ${step6Time.toFixed(3)}ms`);
+    console.log(`  最终分�? ${finalScore.toFixed(6)}`);
     
-    // 总时间统计
-    const totalTime = step1Time + step3Time + step4Time + step5Time + step6Time;
+    // 总时间统�?    const totalTime = step1Time + step3Time + step4Time + step5Time + step6Time;
     console.log('\n📊 时间分布:');
-    console.log(`总时间: ${totalTime.toFixed(3)}ms`);
+    console.log(`总时�? ${totalTime.toFixed(3)}ms`);
     console.log(`步骤1 (向量获取): ${((step1Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤3 (点积计算): ${((step3Time / totalTime) * 100).toFixed(1)}%`);
     console.log(`步骤4 (修正获取): ${((step4Time / totalTime) * 100).toFixed(1)}%`);
@@ -232,7 +221,7 @@ describe('单个相似度计算步骤分解测试', () => {
       4
     );
     
-    console.log(`\n✅ 验证结果:`);
+    console.log(`\n�?验证结果:`);
     console.log(`期望分数: ${expectedResult.score.toFixed(6)}`);
     console.log(`计算分数: ${finalScore.toFixed(6)}`);
     console.log(`差异: ${Math.abs(expectedResult.score - finalScore).toFixed(8)}`);
@@ -311,8 +300,7 @@ describe('单个相似度计算步骤分解测试', () => {
     const indexCorrections4bit = quantizedVectors4bit.getCorrectiveTerms(targetOrd);
     const centroidDP4bit = quantizedVectors4bit.getCentroidDP();
     
-    // 四项公式计算（4bit版本）
-    const x1_4bit = indexCorrections4bit.quantizedComponentSum;
+    // 四项公式计算�?bit版本�?    const x1_4bit = indexCorrections4bit.quantizedComponentSum;
     const ax_4bit = indexCorrections4bit.lowerInterval;
     const lx_4bit = indexCorrections4bit.upperInterval - ax_4bit;
     const ay_4bit = queryCorrections4bit.lowerInterval;

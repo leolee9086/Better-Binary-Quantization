@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
 
 /**
- * @织: 相似度计算步骤分解测试
+ * @�? 相似度计算步骤分解测�?
  * 深入分解相似度计算的每一个内部步骤，找出性能瓶颈
  */
 
@@ -18,7 +18,7 @@ interface PerformancePoint {
   time: number;
   /** 开始时间戳 */
   startTime: number;
-  /** 结束时间戳 */
+  /** 结束时间�?*/
   endTime: number;
   /** 额外信息 */
   info?: Record<string, any>;
@@ -73,10 +73,10 @@ class SimilarityComputationProfiler {
 
   printAnalysis(): void {
     const totalTime = this.getTotalTime();
-    console.log('\n📊 相似度计算步骤分解:');
+    console.log('\n📊 相似度计算步骤分�?');
     console.log('='.repeat(60));
-    console.log(`总时间: ${totalTime.toFixed(2)}ms`);
-    console.log('\n各步骤详情:');
+    console.log(`总时�? ${totalTime.toFixed(2)}ms`);
+    console.log('\n各步骤详�?');
     
     this.steps.forEach((step, index) => {
       const percentage = ((step.time / totalTime) * 100).toFixed(1);
@@ -88,9 +88,9 @@ class SimilarityComputationProfiler {
       }
     });
     
-    // 找出最耗时的步骤
+    // 找出最耗时的步�?
     const bottlenecks = this.steps
-      .filter(step => (step.time / totalTime) > 0.05) // 超过5%的步骤
+      .filter(step => (step.time / totalTime) > 0.05) // 超过5%的步�?
       .sort((a, b) => b.time - a.time);
     
     if (bottlenecks.length > 0) {
@@ -118,8 +118,8 @@ function generateVectors(count: number, dimension: number): Float32Array[] {
   return vectors;
 }
 
-describe('相似度计算步骤分解测试', () => {
-  it('1bit量化相似度计算步骤分解', () => {
+describe('相似度计算步骤分解测�?, () => {
+  it('1bit量化相似度计算步骤分�?, () => {
     const profiler = new SimilarityComputationProfiler();
     
     // 测试参数
@@ -152,7 +152,7 @@ describe('相似度计算步骤分解测试', () => {
     const scorer = format.getScorer();
     const queryBits = format.getConfig().queryBits!;
     
-    profiler.startStep('初始化参数');
+    profiler.startStep('初始化参�?);
     const totalBatches = Math.ceil(vectorCount / batchSize);
     profiler.endStep({ 
       vectorCount, 
@@ -167,7 +167,7 @@ describe('相似度计算步骤分解测试', () => {
     let totalScoreAssignTime = 0;
     let totalBatchOverhead = 0;
     
-    // 逐批次处理
+    // 逐批次处�?
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       const start = batchIndex * batchSize;
       const end = Math.min(start + batchSize, vectorCount);
@@ -203,7 +203,7 @@ describe('相似度计算步骤分解测试', () => {
       
       profiler.startStep(`批次${batchIndex + 1}-相似度核心计算`);
       const dotProductStart = performance.now();
-      // 核心相似度计算 - 这是最关键的步骤
+      // 核心相似度计�?- 这是最关键的步�?
       const results = scorer.computeBatchQuantizedScores(
         quantizedQuery,
         queryCorrections,
@@ -229,7 +229,7 @@ describe('相似度计算步骤分解测试', () => {
       
       profiler.startStep(`批次${batchIndex + 1}-分数存储`);
       const scoreAssignStart = performance.now();
-      // 分数赋值
+      // 分数赋�?
       for (let j = 0; j < results.length; j++) {
         const result = results[j];
         if (result) {
@@ -244,7 +244,7 @@ describe('相似度计算步骤分解测试', () => {
       });
     }
     
-    profiler.startStep('汇总统计');
+    profiler.startStep('汇总统�?);
     const finalStats = {
       totalBatches,
       totalVectorAccessTime: totalVectorAccessTime.toFixed(2),
@@ -262,15 +262,15 @@ describe('相似度计算步骤分解测试', () => {
     profiler.printAnalysis();
     
     console.log('\n🎯 性能瓶颈分析:');
-    console.log(`向量访问总时间: ${totalVectorAccessTime.toFixed(2)}ms`);
-    console.log(`相似度计算总时间: ${totalDotProductTime.toFixed(2)}ms`);
-    console.log(`分数存储总时间: ${totalScoreAssignTime.toFixed(2)}ms`);
-    console.log(`批次开销总时间: ${totalBatchOverhead.toFixed(2)}ms`);
+    console.log(`向量访问总时�? ${totalVectorAccessTime.toFixed(2)}ms`);
+    console.log(`相似度计算总时�? ${totalDotProductTime.toFixed(2)}ms`);
+    console.log(`分数存储总时�? ${totalScoreAssignTime.toFixed(2)}ms`);
+    console.log(`批次开销总时�? ${totalBatchOverhead.toFixed(2)}ms`);
     
     const totalComputeTime = totalVectorAccessTime + totalDotProductTime + totalScoreAssignTime + totalBatchOverhead;
     console.log('\n📈 时间占比:');
     console.log(`向量访问: ${((totalVectorAccessTime / totalComputeTime) * 100).toFixed(1)}%`);
-    console.log(`相似度计算: ${((totalDotProductTime / totalComputeTime) * 100).toFixed(1)}%`);
+    console.log(`相似度计�? ${((totalDotProductTime / totalComputeTime) * 100).toFixed(1)}%`);
     console.log(`分数存储: ${((totalScoreAssignTime / totalComputeTime) * 100).toFixed(1)}%`);
     console.log(`批次开销: ${((totalBatchOverhead / totalComputeTime) * 100).toFixed(1)}%`);
     
@@ -279,7 +279,7 @@ describe('相似度计算步骤分解测试', () => {
     expect(scores.filter(s => s > 0).length).toBeGreaterThan(0);
   });
 
-  it('4bit量化相似度计算步骤分解', () => {
+  it('4bit量化相似度计算步骤分�?, () => {
     const profiler = new SimilarityComputationProfiler();
     
     // 测试参数  
@@ -312,7 +312,7 @@ describe('相似度计算步骤分解测试', () => {
     const scorer = format.getScorer();
     const queryBits = format.getConfig().queryBits!;
     
-    profiler.startStep('初始化参数');
+    profiler.startStep('初始化参�?);
     const totalBatches = Math.ceil(vectorCount / batchSize);
     profiler.endStep({ 
       vectorCount, 
@@ -327,7 +327,7 @@ describe('相似度计算步骤分解测试', () => {
     let totalScoreAssignTime = 0;
     let totalBatchOverhead = 0;
     
-    // 逐批次处理
+    // 逐批次处�?
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       const start = batchIndex * batchSize;
       const end = Math.min(start + batchSize, vectorCount);
@@ -363,7 +363,7 @@ describe('相似度计算步骤分解测试', () => {
       
       profiler.startStep(`批次${batchIndex + 1}-相似度核心计算`);
       const dotProductStart = performance.now();
-      // 核心相似度计算
+      // 核心相似度计�?
       const results = scorer.computeBatchQuantizedScores(
         quantizedQuery,
         queryCorrections,
@@ -389,7 +389,7 @@ describe('相似度计算步骤分解测试', () => {
       
       profiler.startStep(`批次${batchIndex + 1}-分数存储`);
       const scoreAssignStart = performance.now();
-      // 分数赋值
+      // 分数赋�?
       for (let j = 0; j < results.length; j++) {
         const result = results[j];
         if (result) {
@@ -404,7 +404,7 @@ describe('相似度计算步骤分解测试', () => {
       });
     }
     
-    profiler.startStep('汇总统计');
+    profiler.startStep('汇总统�?);
     const finalStats = {
       totalBatches,
       totalVectorAccessTime: totalVectorAccessTime.toFixed(2),
@@ -422,15 +422,15 @@ describe('相似度计算步骤分解测试', () => {
     profiler.printAnalysis();
     
     console.log('\n🎯 性能瓶颈分析:');
-    console.log(`向量访问总时间: ${totalVectorAccessTime.toFixed(2)}ms`);
-    console.log(`相似度计算总时间: ${totalDotProductTime.toFixed(2)}ms`);
-    console.log(`分数存储总时间: ${totalScoreAssignTime.toFixed(2)}ms`);
-    console.log(`批次开销总时间: ${totalBatchOverhead.toFixed(2)}ms`);
+    console.log(`向量访问总时�? ${totalVectorAccessTime.toFixed(2)}ms`);
+    console.log(`相似度计算总时�? ${totalDotProductTime.toFixed(2)}ms`);
+    console.log(`分数存储总时�? ${totalScoreAssignTime.toFixed(2)}ms`);
+    console.log(`批次开销总时�? ${totalBatchOverhead.toFixed(2)}ms`);
     
     const totalComputeTime = totalVectorAccessTime + totalDotProductTime + totalScoreAssignTime + totalBatchOverhead;
     console.log('\n📈 时间占比:');
     console.log(`向量访问: ${((totalVectorAccessTime / totalComputeTime) * 100).toFixed(1)}%`);
-    console.log(`相似度计算: ${((totalDotProductTime / totalComputeTime) * 100).toFixed(1)}%`);
+    console.log(`相似度计�? ${((totalDotProductTime / totalComputeTime) * 100).toFixed(1)}%`);
     console.log(`分数存储: ${((totalScoreAssignTime / totalComputeTime) * 100).toFixed(1)}%`);
     console.log(`批次开销: ${((totalBatchOverhead / totalComputeTime) * 100).toFixed(1)}%`);
     
@@ -439,10 +439,10 @@ describe('相似度计算步骤分解测试', () => {
     expect(scores.filter(s => s > 0).length).toBeGreaterThan(0);
   });
 
-  it('1bit vs 4bit相似度计算对比', () => {
-    console.log('\n🔍 1bit vs 4bit 相似度计算详细对比');
+  it('1bit vs 4bit相似度计算对�?, () => {
+    console.log('\n🔍 1bit vs 4bit 相似度计算详细对�?);
     console.log('='.repeat(60));
-    console.log('此测试通过上面两个测试的结果进行对比分析');
+    console.log('此测试通过上面两个测试的结果进行对比分�?);
     console.log('重点关注相似度核心计算步骤的性能差异');
     
     // 这个测试主要用于输出对比信息，实际数据来自上面的测试

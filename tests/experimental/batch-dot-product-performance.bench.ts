@@ -8,7 +8,7 @@ import {
   computeQuantizedDotProduct,
   computeBatchQuantizedDotProducts,
   computeBatchQuantizedDotProductsOptimized
-} from '../src/bitwiseDotProduct';
+} from '@src/bitwiseDotProduct';
 
 describe('批量点积计算性能测试', () => {
   // 生成测试数据
@@ -42,7 +42,7 @@ describe('批量点积计算性能测试', () => {
     };
   };
 
-  it('批量点积计算正确性验证', () => {
+  it('批量点积计算正确性验�?, () => {
     const { quantizedQuery, targetVectors } = generateTestData(100, 1024);
     const mockTargetVectors = createMockTargetVectors(targetVectors);
     const targetOrds = Array.from({ length: 100 }, (_, i) => i);
@@ -68,7 +68,7 @@ describe('批量点积计算性能测试', () => {
       targetOrds
     );
     
-    // 验证结果一致性
+    // 验证结果一致�?
     expect(batchResults.length).toBe(individualResults.length);
     expect(optimizedBatchResults.length).toBe(individualResults.length);
     
@@ -117,7 +117,7 @@ describe('批量点积计算性能测试', () => {
     const mockTargetVectors = createMockTargetVectors(targetVectors);
     
     // 小规模批量（100个向量）
-    bench('小规模批量计算 (100个向量)', () => {
+    bench('小规模批量计�?(100个向�?', () => {
       const targetOrds = Array.from({ length: 100 }, (_, i) => i);
       return computeBatchQuantizedDotProductsOptimized(
         quantizedQuery,
@@ -126,8 +126,8 @@ describe('批量点积计算性能测试', () => {
       );
     });
     
-    // 中等规模批量（1000个向量）
-    bench('中等规模批量计算 (1000个向量)', () => {
+    // 中等规模批量�?000个向量）
+    bench('中等规模批量计算 (1000个向�?', () => {
       const targetOrds = Array.from({ length: 1000 }, (_, i) => i);
       return computeBatchQuantizedDotProductsOptimized(
         quantizedQuery,
@@ -137,7 +137,7 @@ describe('批量点积计算性能测试', () => {
     });
     
     // 大规模批量（5000个向量）
-    bench('大规模批量计算 (5000个向量)', () => {
+    bench('大规模批量计�?(5000个向�?', () => {
       const targetOrds = Array.from({ length: 5000 }, (_, i) => i);
       return computeBatchQuantizedDotProductsOptimized(
         quantizedQuery,

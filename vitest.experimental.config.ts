@@ -1,16 +1,16 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: ['**/tests/experimental/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
       '**/node_modules/**', 
       '**/dist/**', 
       '**/cypress/**', 
-      '**/.{idea,git,cache,output,temp}/**',
-      '**/tests/experimental/**' // 排除实验性测试
+      '**/.{idea,git,cache,output,temp}/**'
     ],
     coverage: {
       provider: 'v8',
@@ -21,14 +21,14 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
-        '**/*.bench.ts',
-        '**/tests/experimental/**' // 排除实验性测试的覆盖率
+        '**/*.bench.ts'
       ]
     }
   },
   resolve: {
     alias: {
-      '@': './src'
+      '@': resolve(__dirname, './src'),
+      '@src': resolve(__dirname, './src')
     }
   }
 }); 

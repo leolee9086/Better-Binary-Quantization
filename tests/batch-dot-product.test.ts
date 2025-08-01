@@ -137,8 +137,8 @@ describe('Batch Dot Product Performance Test', () => {
 
       // Iterate through each byte of the query vector and corresponding bytes in the buffer
       for (let i = 0; i < queryVector.length; i++) {
-        const queryByte = queryVector[i];
-        const dataByte = concatenatedBuffer[vectorOffset + i];
+        const queryByte = queryVector[i]!;
+        const dataByte = concatenatedBuffer[vectorOffset + i]!;
 
         // This is where bitwise addition (inner product) needs to happen
         // For 1-bit, it's popcount(queryByte & dataByte)
@@ -184,14 +184,14 @@ Batch 1-bit Dot Product Calculation Time for ${NUM_VECTORS} vectors: ${batchTime
 
       // If computeQuantizedDotProduct expects unpacked 0/1:
       const unpackedQuery = unpack1BitVector(queryVector, DIMENSION);
-      const unpackedTarget = unpack1BitVector(allPackedVectors[i], DIMENSION);
+      const unpackedTarget = unpack1BitVector(allPackedVectors[i]!, DIMENSION);
       const expectedScore = computeQuantizedDotProduct(unpackedQuery, unpackedTarget); // This will sum 0s and 1s
 
       // Our batch method sums based on bitwise AND.
       // Let's create a bitwise dot product for comparison.
       let singleBitwiseDotProduct = 0;
       for(let j = 0; j < queryVector.length; j++) {
-        singleBitwiseDotProduct += countSetBits(queryVector[j] & allPackedVectors[i][j]);
+        singleBitwiseDotProduct += countSetBits(queryVector[j]! & allPackedVectors[i]![j]!);
       }
 
       if (results[i] === singleBitwiseDotProduct) {
@@ -208,7 +208,7 @@ Batch 1-bit Dot Product Calculation Time for ${NUM_VECTORS} vectors: ${batchTime
     const startTimeExisting = performance.now();
     for (let i = 0; i < NUM_VECTORS; i++) {
       const unpackedQuery = unpack1BitVector(queryVector, DIMENSION);
-      const unpackedTarget = unpack1BitVector(allPackedVectors[i], DIMENSION);
+      const unpackedTarget = unpack1BitVector(allPackedVectors[i]!, DIMENSION);
       computeQuantizedDotProduct(unpackedQuery, unpackedTarget);
     }
     const endTimeExisting = performance.now();
@@ -268,8 +268,8 @@ function computeBatchDotProductOriginal(
     const vectorOffset = vecIndex * bytesPerVector;
     
     for (let i = 0; i < queryVector.length; i++) {
-      const queryByte = queryVector[i];
-      const dataByte = concatenatedBuffer[vectorOffset + i];
+      const queryByte = queryVector[i]!;
+      const dataByte = concatenatedBuffer[vectorOffset + i]!;
       
       // 原始方法：逐位计算
       currentDotProduct += (

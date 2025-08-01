@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import { VectorSimilarityFunction } from '../src/types';
-import { normalizeVector } from '../src/vectorOperations';
+import { BinaryQuantizationFormat } from '@src/binaryQuantizationFormat';
+import { VectorSimilarityFunction } from '@src/types';
+import { normalizeVector } from '@src/vectorOperations';
 
 /**
  * 生成测试向量
@@ -56,7 +56,7 @@ describe('缓存性能测试', () => {
     console.log(`构建时间: ${buildTime.toFixed(2)}ms`);
     
     // 执行多次查询
-    console.log(`\n🔍 执行${queryCount}次查询...`);
+    console.log(`\n🔍 执行${queryCount}次查�?..`);
     const queryTimes: number[] = [];
     
     for (let i = 0; i < queryCount; i++) {
@@ -75,13 +75,13 @@ describe('缓存性能测试', () => {
     
     console.log(`\n📈 性能统计:`);
     console.log(`平均查询时间: ${avgQueryTime.toFixed(2)}ms`);
-    console.log(`最快查询时间: ${minQueryTime.toFixed(2)}ms`);
-    console.log(`最慢查询时间: ${maxQueryTime.toFixed(2)}ms`);
-    console.log(`查询吞吐量: ${Math.round(1000 / avgQueryTime)} 查询/秒`);
+    console.log(`最快查询时�? ${minQueryTime.toFixed(2)}ms`);
+    console.log(`最慢查询时�? ${maxQueryTime.toFixed(2)}ms`);
+    console.log(`查询吞吐�? ${Math.round(1000 / avgQueryTime)} 查询/秒`);
     
     // 验证结果
     expect(avgQueryTime).toBeLessThan(300); // 平均查询时间小于300ms
     
-    console.log(`\n✅ 测试完成`);
+    console.log(`\n�?测试完成`);
   });
 }); 
