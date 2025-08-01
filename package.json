@@ -17,6 +17,7 @@
     "test:coverage": "vitest --coverage",
     "test:experimental": "vitest --config vitest.experimental.config.ts --run",
     "test:experimental:watch": "vitest --config vitest.experimental.config.ts",
+    "exp": "node scripts/run-experimental.js",
     "bench": "vitest bench  --run",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
