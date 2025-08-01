@@ -20,7 +20,7 @@ import { computeCosineSimilarity } from '../../src/vectorSimilarity';
 describe('SIFT1M性能测试', () => {
   // 预加载数据 - 不计入性能测试
   const datasetDir = join(__dirname, '../../dataset/sift1m');
-  const baseDataset = loadSiftDataset(datasetDir, 'base', 10000);
+  const baseDataset = loadSiftDataset(datasetDir, 'base', 1000000);
   const queryData = loadSiftQueries(datasetDir, 100);
   
   if (!baseDataset.vectors.length || !queryData.queries.length) {
@@ -52,7 +52,7 @@ describe('SIFT1M性能测试', () => {
   const quantizedData = format.quantizeVectors(baseVectors);
 
   describe('量化性能', () => {
-    bench('量化10000个128维向量', () => {
+    bench('量化1000000个128维向量', () => {
       format.quantizeVectors(baseVectors);
     });
   });
@@ -163,16 +163,4 @@ describe('SIFT1M性能测试', () => {
     });
   });
 
-  describe('内存分析', () => {
-    bench('内存压缩比', () => {
-      // 原始数据大小（字节）
-      const firstVector = baseVectors[0];
-      const originalSize = firstVector ? baseVectors.length * firstVector.length * 4 : 0; // 4字节/浮点数
-      
-      // 量化数据大小（字节）
-      const quantizedSize = quantizedData.quantizedVectors.size() * quantizedData.quantizedVectors.vectorValue(0).length;
-      
-      console.log(`压缩比: ${(originalSize / quantizedSize).toFixed(2)}:1`);
-    });
-  });
 });

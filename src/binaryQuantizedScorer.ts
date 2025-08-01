@@ -16,6 +16,13 @@ import {
   computeInt4BitDotProduct
 } from './bitwiseDotProduct';
 import { computeSimilarity } from './vectorSimilarity';
+import {
+  computeBatchDotProductOptimized,
+  computeBatchFourBitDotProductOptimized,
+  createConcatenatedBuffer,
+  computeBatchOneBitSimilarityScores,
+  computeBatchFourBitSimilarityScores
+} from './batchDotProduct';
 
 
 /**
@@ -296,6 +303,7 @@ export class BinaryQuantizedScorer {
 
   /**
    * 批量计算量化相似性分数
+   * 使用八路循环展开的批量点积算法，显著提升性能
    * @param quantizedQuery 量化的查询向量
    * @param queryCorrections 查询向量修正因子
    * @param targetVectors 目标向量集合
@@ -308,22 +316,84 @@ export class BinaryQuantizedScorer {
     queryCorrections: QuantizationResult,
     targetVectors: BinarizedByteVectorValues,
     targetOrds: number[],
-    queryBits: number
+    queryBits: number,
+    originalQueryVector?: Float32Array
   ): QuantizedScoreResult[] {
-    const results: QuantizedScoreResult[] = [];
 
-    for (const targetOrd of targetOrds) {
-      const result = this.computeQuantizedScore(
+
+
+    // 批量计算（1位和4位量化）
+    try {
+      // 1. 创建连接的目标向量缓冲区
+      const concatenatedBuffer = createConcatenatedBuffer(targetVectors, targetOrds);
+
+      // 2. 使用八路循环展开进行批量点积计算
+      let qcDists: number[];
+      qcDists = computeBatchDotProductOptimized(
         quantizedQuery,
-        queryCorrections,
-        targetVectors,
-        targetOrd,
-        queryBits
+        concatenatedBuffer,
+        targetOrds.length,
+        targetVectors.dimension()
       );
-      results.push(result);
-    }
 
-    return results;
+
+      // 3. 批量计算相似性分数
+      let scores: number[];
+      if (queryBits === 1) {
+        scores = computeBatchOneBitSimilarityScores(
+          qcDists,
+          queryCorrections,
+          targetVectors,
+          targetOrds,
+          targetVectors.dimension(),
+          targetVectors.getCentroidDP(),
+          this.similarityFunction
+        );
+      } else {
+        // 4位量化：需要传递原始查询向量给getCentroidDP
+        scores = computeBatchFourBitSimilarityScores(
+          qcDists,
+          queryCorrections,
+          targetVectors,
+          targetOrds,
+          targetVectors.dimension(),
+          targetVectors.getCentroidDP(originalQueryVector),
+          this.similarityFunction
+        );
+      }
+
+      // 4. 构建结果数组
+      const results: QuantizedScoreResult[] = [];
+      for (let i = 0; i < targetOrds.length; i++) {
+        const indexCorrections = targetVectors.getCorrectiveTerms(targetOrds[i]!);
+        results.push({
+          score: scores[i]!,
+          bitDotProduct: qcDists[i]!,
+          corrections: {
+            query: queryCorrections,
+            index: indexCorrections
+          }
+        });
+      }
+
+      return results;
+    } catch (error) {
+      // 如果批量计算失败，回退到原始方法
+      console.warn('批量计算失败，回退到原始方法:', error);
+      const results: QuantizedScoreResult[] = [];
+      for (const targetOrd of targetOrds) {
+        const result = this.computeQuantizedScore(
+          quantizedQuery,
+          queryCorrections,
+          targetVectors,
+          targetOrd,
+          queryBits,
+          originalQueryVector
+        );
+        results.push(result);
+      }
+      return results;
+    }
   }
 
   /**
