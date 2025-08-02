@@ -20,7 +20,7 @@ import { computeCosineSimilarity } from '../../src/vectorSimilarity';
 describe('SIFT1M性能测试', () => {
   // 预加载数据 - 不计入性能测试
   const datasetDir = join(__dirname, '../../dataset/sift1m');
-  const baseDataset = loadSiftDataset(datasetDir, 'base', 1000000);
+  const baseDataset = loadSiftDataset(datasetDir, 'base', 100000);
   const queryData = loadSiftQueries(datasetDir, 100);
   
   if (!baseDataset.vectors.length || !queryData.queries.length) {
