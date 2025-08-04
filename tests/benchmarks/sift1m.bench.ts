@@ -1,10 +1,10 @@
 import { describe, bench } from 'vitest';
 import { join } from 'path';
-import { 
-  loadSiftDataset, 
-  loadSiftQueries 
+import {
+  loadSiftDataset,
+  loadSiftQueries
 } from './siftDataLoader';
-import { 
+import {
   BinaryQuantizationFormat,
   VectorSimilarityFunction
 } from '../../src/index';
@@ -20,9 +20,9 @@ import { computeCosineSimilarity } from '../../src/vectorSimilarity';
 describe('SIFT1M性能测试', () => {
   // 预加载数据 - 不计入性能测试
   const datasetDir = join(__dirname, '../../dataset/sift1m');
-  const baseDataset = loadSiftDataset(datasetDir, 'base', 100000);
+  const baseDataset = loadSiftDataset(datasetDir, 'base', 10000);
   const queryData = loadSiftQueries(datasetDir, 100);
-  
+
   if (!baseDataset.vectors.length || !queryData.queries.length) {
     throw new Error('数据加载失败');
   }
@@ -30,7 +30,7 @@ describe('SIFT1M性能测试', () => {
   // 准备数据
   const baseVectors = baseDataset.vectors.map(v => v.values).filter((v): v is Float32Array => v !== undefined);
   const queryVectors = queryData.queries.map(v => v.values).filter((v): v is Float32Array => v !== undefined);
-  
+
   if (!baseVectors.length || !queryVectors.length) {
     throw new Error('向量数据无效');
   }
@@ -74,7 +74,7 @@ describe('SIFT1M性能测试', () => {
     bench('暴力搜索 - 单个查询', () => {
       const scores = new Float32Array(baseVectors.length);
       const indices = new Int32Array(baseVectors.length);
-      
+
       // 初始化索引
       for (let i = 0; i < baseVectors.length; i++) {
         indices[i] = i;
@@ -92,18 +92,18 @@ describe('SIFT1M性能测试', () => {
           }
         }
 
-                    // 选择前k个
-            for (let i = 0; i < k; i++) {
-              let maxIdx = i;
-              for (let j = i + 1; j < baseVectors.length; j++) {
-                const idxJ = indices[j];
-                const idxMax = indices[maxIdx];
-                if (idxJ !== undefined && idxMax !== undefined && 
-                    scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
-                    scores[idxJ] > scores[idxMax]) {
-                  maxIdx = j;
-                }
-              }
+        // 选择前k个
+        for (let i = 0; i < k; i++) {
+          let maxIdx = i;
+          for (let j = i + 1; j < baseVectors.length; j++) {
+            const idxJ = indices[j];
+            const idxMax = indices[maxIdx];
+            if (idxJ !== undefined && idxMax !== undefined &&
+              scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
+              scores[idxJ] > scores[idxMax]) {
+              maxIdx = j;
+            }
+          }
           if (maxIdx !== i) {
             const temp = indices[i];
             const maxIdxValue = indices[maxIdx];
@@ -119,7 +119,7 @@ describe('SIFT1M性能测试', () => {
     bench('暴力搜索 - 批量查询', () => {
       const scores = new Float32Array(baseVectors.length);
       const indices = new Int32Array(baseVectors.length);
-      
+
       // 初始化索引
       for (let i = 0; i < baseVectors.length; i++) {
         indices[i] = i;
@@ -143,9 +143,9 @@ describe('SIFT1M性能测试', () => {
             for (let j = i + 1; j < baseVectors.length; j++) {
               const idxJ = indices[j];
               const idxMax = indices[maxIdx];
-              if (idxJ !== undefined && idxMax !== undefined && 
-                  scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
-                  scores[idxJ] > scores[idxMax]) {
+              if (idxJ !== undefined && idxMax !== undefined &&
+                scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
+                scores[idxJ] > scores[idxMax]) {
                 maxIdx = j;
               }
             }

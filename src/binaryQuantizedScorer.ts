@@ -20,9 +20,14 @@ import {
   computeBatchDotProductOptimized,
   computeBatchFourBitDotProductOptimized,
   createConcatenatedBuffer,
+  createDirectPackedBuffer,
+  createDirectPackedBufferFourBit,
+  computeBatchDotProductDirectPacked,
+  computeBatchFourBitDotProductDirectPacked,
   computeBatchOneBitSimilarityScores,
   computeBatchFourBitSimilarityScores
 } from './batchDotProduct';
+import { OptimizedScalarQuantizer } from './optimizedScalarQuantizer';
 
 
 /**
@@ -324,17 +329,38 @@ export class BinaryQuantizedScorer {
 
     // 批量计算（1位和4位量化）
     try {
-      // 1. 创建连接的目标向量缓冲区
-      const concatenatedBuffer = createConcatenatedBuffer(targetVectors, targetOrds);
-
-      // 2. 使用八路循环展开进行批量点积计算
       let qcDists: number[];
-      qcDists = computeBatchDotProductOptimized(
-        quantizedQuery,
-        concatenatedBuffer,
-        targetOrds.length,
-        targetVectors.dimension()
-      );
+      
+      if (queryBits === 1) {
+        // 1位量化：使用直接打包算法
+        // 1. 创建打包的查询向量
+        const packedQueryLength = Math.ceil(quantizedQuery.length / 8);
+        const packedQuantizedQuery = new Uint8Array(packedQueryLength);
+        OptimizedScalarQuantizer.packAsBinary(quantizedQuery, packedQuantizedQuery);
+
+        // 2. 创建直接打包的目标向量缓冲区
+        const directPackedBuffer = createDirectPackedBuffer(targetVectors, targetOrds, packedQuantizedQuery.length);
+
+        // 3. 使用直接打包算法进行批量点积计算
+        qcDists = computeBatchDotProductDirectPacked(
+          packedQuantizedQuery,
+          directPackedBuffer,
+          targetOrds.length,
+          targetVectors.dimension()
+        );
+      } else {
+        // 4位量化：使用正确的直接打包算法
+        // 1. 创建直接打包的目标向量缓冲区
+        const directPackedBuffer = createDirectPackedBufferFourBit(targetVectors, targetOrds, quantizedQuery.length);
+
+        // 2. 使用直接打包算法进行批量点积计算
+        qcDists = computeBatchFourBitDotProductDirectPacked(
+          quantizedQuery,
+          directPackedBuffer,
+          targetOrds.length,
+          targetVectors.dimension()
+        );
+      }
 
 
       // 3. 批量计算相似性分数

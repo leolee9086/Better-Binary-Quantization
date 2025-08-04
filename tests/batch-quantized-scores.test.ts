@@ -9,7 +9,9 @@ import {
   createConcatenatedBuffer,
   computeBatchOneBitSimilarityScores,
   computeBatchFourBitSimilarityScores,
-  computeBatchDotProductTrueOriginal
+  computeBatchDotProductTrueOriginal,
+  createDirectPackedBufferFourBit,
+  computeBatchFourBitDotProductDirectPacked
 } from '../src/batchDotProduct';
 
 describe('Batch Quantized Scores Test', () => {
@@ -215,11 +217,11 @@ describe('Batch Quantized Scores Test', () => {
     const targetOrds = Array.from({ length: 100 }, (_, i) => i);
 
     // 预创建连接缓冲区（一次性操作，不计入算法时间）
-    const concatenatedBuffer = createConcatenatedBuffer(quantizedVectors4bit, targetOrds);
+    const concatenatedBuffer = createDirectPackedBufferFourBit(quantizedVectors4bit, targetOrds,quantizedQuery.length);
 
     // 测试4位量化的批量计算
     const startTime = performance.now();
-    const qcDists = computeBatchDotProductOptimized(
+    const qcDists = computeBatchFourBitDotProductDirectPacked(
       quantizedQuery,
       concatenatedBuffer,
       targetOrds.length,

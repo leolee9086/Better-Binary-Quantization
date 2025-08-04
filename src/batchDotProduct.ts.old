@@ -8,45 +8,6 @@ import type { QuantizationResult } from './types';
 import { VectorSimilarityFunction } from './types';
 import { computeInt1BitDotProduct } from './bitwiseDotProduct';
 import { FOUR_BIT_SCALE } from './constants';
-/**
- * 直接处理打包向量的超向量化批量点积计算
- * 使用预构造的连续buffer进行计算，避免解包开销
- * 对于单比特数据，使用按位与+位计数
- * @param queryVector 查询向量（已打包）
- * @param continuousBuffer 预构造的连续buffer
- * @param numVectors 向量数量
- * @param dimension 向量维度
- * @returns 点积结果数组
- */
-export function computeBatchDotProductDirectPacked(
-  queryVector: Uint8Array,
-  continuousBuffer: Uint8Array,
-  numVectors: number,
-  dimension: number
-): number[] {
-  const results: number[] = new Array(numVectors).fill(0);
-  const queryLength = queryVector.length;
-  
-  for (let vecIndex = 0; vecIndex < numVectors; vecIndex++) {
-    let currentDotProduct = 0;
-    const vectorOffset = vecIndex * queryLength;
-    
-    // 处理打包后的数据（每个字节0-255）
-    // 使用按位与+位计数
-    for (let i = 0; i < queryLength; i++) {
-      const queryByte = queryVector[i]!;
-      const targetByte = continuousBuffer[vectorOffset + i]!;
-      
-      // 按位与，然后计算1的个数
-      const andResult = queryByte & targetByte;
-      currentDotProduct += bitCount32Optimized(andResult);
-    }
-    
-    results[vecIndex] = currentDotProduct;
-  }
-  
-  return results;
-}
 
 /**
  * 超向量化位计数算法 - 专门为32位整数优化
@@ -454,9 +415,46 @@ export function createDirectPackedBuffer(
   return continuousBuffer;
 }
 
-export {
-  computeBatchFourBitDotProductDirectPacked
-} from './utils/computeBatchFourBitDotProductDirectPacked'
+/**
+ * 直接处理打包向量的超向量化批量点积计算
+ * 使用预构造的连续buffer进行计算，避免解包开销
+ * 对于单比特数据，使用按位与+位计数
+ * @param queryVector 查询向量（已打包）
+ * @param continuousBuffer 预构造的连续buffer
+ * @param numVectors 向量数量
+ * @param dimension 向量维度
+ * @returns 点积结果数组
+ */
+export function computeBatchDotProductDirectPacked(
+  queryVector: Uint8Array,
+  continuousBuffer: Uint8Array,
+  numVectors: number,
+  dimension: number
+): number[] {
+  const results: number[] = new Array(numVectors).fill(0);
+  const queryLength = queryVector.length;
+  
+  for (let vecIndex = 0; vecIndex < numVectors; vecIndex++) {
+    let currentDotProduct = 0;
+    const vectorOffset = vecIndex * queryLength;
+    
+    // 处理打包后的数据（每个字节0-255）
+    // 使用按位与+位计数
+    for (let i = 0; i < queryLength; i++) {
+      const queryByte = queryVector[i]!;
+      const targetByte = continuousBuffer[vectorOffset + i]!;
+      
+      // 按位与，然后计算1的个数
+      const andResult = queryByte & targetByte;
+      currentDotProduct += bitCount32Optimized(andResult);
+    }
+    
+    results[vecIndex] = currentDotProduct;
+  }
+  
+  return results;
+}
+
 /**
  * 构造直接打包算法的连续buffer（4位量化版本）
  * @param targetVectors 目标向量集合（包含打包向量）
@@ -485,6 +483,44 @@ export function createDirectPackedBufferFourBit(
   return buffer;
 }
 
+/**
+ * 正确的4位批量点积算法（查询未打包，目标打包）
+ * @param queryVector 4位量化查询向量 (未打包, 每字节1个值)
+ * @param continuousBuffer 1位量化目标向量的连续打包buffer
+ * @param numVectors 向量数量
+ * @param dimension 向量维度
+ * @returns 点积结果数组
+ */
+export function computeBatchFourBitDotProductDirectPacked(
+  queryVector: Uint8Array,
+  continuousBuffer: Uint8Array,
+  numVectors: number,
+  dimension: number
+): number[] {
+  const results: number[] = new Array(numVectors).fill(0);
+  const packedDimension = Math.ceil(dimension / 8);
+
+  for (let vecIndex = 0; vecIndex < numVectors; vecIndex++) {
+    let currentDotProduct = 0;
+    const targetOffset = vecIndex * packedDimension;
+
+    for (let dim = 0; dim < dimension; dim++) {
+      // 查询向量是未打包的, 直接按索引取值
+      const queryValue = queryVector[dim]!;
+
+      // 目标向量是打包的, 需要通过位运算取值
+      const targetByteIndex = Math.floor(dim / 8);
+      const targetBitIndex = 7 - (dim % 8);
+      const targetByte = continuousBuffer[targetOffset + targetByteIndex]!;
+      const targetValue = (targetByte >> targetBitIndex) & 1;
+
+      // 直接相乘并累加
+      currentDotProduct += queryValue * targetValue;
+    }
+    results[vecIndex] = currentDotProduct;
+  }
+  return results;
+}
 
 /**
  * 批量计算1位量化相似性分数
