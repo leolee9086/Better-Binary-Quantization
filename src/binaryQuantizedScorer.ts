@@ -21,7 +21,6 @@ import {
   computeBatchFourBitDotProductOptimized,
   createConcatenatedBuffer,
   createDirectPackedBuffer,
-  createDirectPackedBufferFourBit,
   computeBatchDotProductDirectPacked,
   computeBatchFourBitDotProductDirectPacked,
   computeBatchOneBitSimilarityScores,
@@ -351,7 +350,7 @@ export class BinaryQuantizedScorer {
       } else {
         // 4位量化：使用正确的直接打包算法
         // 1. 创建直接打包的目标向量缓冲区
-        const directPackedBuffer = createDirectPackedBufferFourBit(targetVectors, targetOrds, quantizedQuery.length);
+        const directPackedBuffer = createDirectPackedBuffer(targetVectors, targetOrds, quantizedQuery.length);
 
         // 2. 使用直接打包算法进行批量点积计算
         qcDists = computeBatchFourBitDotProductDirectPacked(

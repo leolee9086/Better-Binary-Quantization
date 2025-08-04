@@ -20,7 +20,7 @@ import { computeCosineSimilarity } from '../../src/vectorSimilarity';
 describe('SIFT1M性能测试', () => {
   // 预加载数据 - 不计入性能测试
   const datasetDir = join(__dirname, '../../dataset/sift1m');
-  const baseDataset = loadSiftDataset(datasetDir, 'base', 10000);
+  const baseDataset = loadSiftDataset(datasetDir, 'base', 100000);
   const queryData = loadSiftQueries(datasetDir, 100);
 
   if (!baseDataset.vectors.length || !queryData.queries.length) {
@@ -39,7 +39,7 @@ describe('SIFT1M性能测试', () => {
 
   // 创建量化格式实例
   const format = new BinaryQuantizationFormat({
-    queryBits: 4,
+    queryBits: 1,
     indexBits: 1,
     quantizer: {
       similarityFunction: VectorSimilarityFunction.COSINE,
@@ -57,7 +57,7 @@ describe('SIFT1M性能测试', () => {
     });
   });
 
-  describe('搜索性能', () => {
+  describe('单独搜索性能', () => {
     bench('量化搜索 - 单个查询', () => {
       const query = queryVectors[0];
       if (query) {
@@ -65,11 +65,6 @@ describe('SIFT1M性能测试', () => {
       }
     });
 
-    bench('量化搜索 - 批量查询', () => {
-      for (const query of queryVectors) {
-        format.searchNearestNeighbors(query, quantizedData.quantizedVectors, k);
-      }
-    });
 
     bench('暴力搜索 - 单个查询', () => {
       const scores = new Float32Array(baseVectors.length);
@@ -110,52 +105,6 @@ describe('SIFT1M性能测试', () => {
             if (temp !== undefined && maxIdxValue !== undefined) {
               indices[i] = maxIdxValue;
               indices[maxIdx] = temp;
-            }
-          }
-        }
-      }
-    });
-
-    bench('暴力搜索 - 批量查询', () => {
-      const scores = new Float32Array(baseVectors.length);
-      const indices = new Int32Array(baseVectors.length);
-
-      // 初始化索引
-      for (let i = 0; i < baseVectors.length; i++) {
-        indices[i] = i;
-      }
-
-      for (const query of queryVectors) {
-        if (query) {
-          // 计算相似度
-          for (let i = 0; i < baseVectors.length; i++) {
-            const baseVector = baseVectors[i];
-            if (baseVector) {
-              scores[i] = computeCosineSimilarity(query, baseVector);
-            } else {
-              scores[i] = 0;
-            }
-          }
-
-          // 选择前k个
-          for (let i = 0; i < k; i++) {
-            let maxIdx = i;
-            for (let j = i + 1; j < baseVectors.length; j++) {
-              const idxJ = indices[j];
-              const idxMax = indices[maxIdx];
-              if (idxJ !== undefined && idxMax !== undefined &&
-                scores[idxJ] !== undefined && scores[idxMax] !== undefined &&
-                scores[idxJ] > scores[idxMax]) {
-                maxIdx = j;
-              }
-            }
-            if (maxIdx !== i) {
-              const temp = indices[i];
-              const maxIdxValue = indices[maxIdx];
-              if (temp !== undefined && maxIdxValue !== undefined) {
-                indices[i] = maxIdxValue;
-                indices[maxIdx] = temp;
-              }
             }
           }
         }

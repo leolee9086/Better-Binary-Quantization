@@ -1,11 +1,11 @@
 
 /*
  * Optimized 1-bit batch dot product (query unpacked, target packed)
- * @param queryVector unpacked query vector (one value per byte)
- * @param continuousBuffer continuous packed buffer of 1-bit target vectors
- * @param numVectors number of vectors
- * @param dimension vector dimension
- * @returns array of dot products
+ * @param queryVector 4比特量化查询向量
+ * @param continuousBuffer 连续打包的1比特目标向量
+ * @param numVectors 向量数量
+ * @param dimension 向量维度
+ * @returns 点积结果数组
  */
 export function computeBatchFourBitDotProductDirectPacked(
     queryVector: Uint8Array,

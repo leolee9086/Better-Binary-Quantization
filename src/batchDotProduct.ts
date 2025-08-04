@@ -8,6 +8,7 @@ import type { QuantizationResult } from './types';
 import { VectorSimilarityFunction } from './types';
 import { computeInt1BitDotProduct } from './bitwiseDotProduct';
 import { FOUR_BIT_SCALE } from './constants';
+import { bitCount32Optimized } from './utils/bitcount';
 /**
  * 直接处理打包向量的超向量化批量点积计算
  * 使用预构造的连续buffer进行计算，避免解包开销
@@ -48,20 +49,6 @@ export function computeBatchDotProductDirectPacked(
   return results;
 }
 
-/**
- * 超向量化位计数算法 - 专门为32位整数优化
- * @param n 32位整数
- * @returns 1的个数
- */
-function bitCount32Optimized(n: number): number {
-  n = n >>> 0;
-  n = n - ((n >>> 1) & 0x55555555);
-  n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
-  n = (n + (n >>> 4)) & 0x0F0F0F0F;
-  n = n + (n >>> 8);
-  n = n + (n >>> 16);
-  return n & 0x3F;
-}
 
 /**
  * 超向量化批量点积计算 - 使用Uint32Array一次处理4个字节
@@ -454,9 +441,6 @@ export function createDirectPackedBuffer(
   return continuousBuffer;
 }
 
-export {
-  computeBatchFourBitDotProductDirectPacked
-} from './utils/computeBatchFourBitDotProductDirectPacked'
 /**
  * 构造直接打包算法的连续buffer（4位量化版本）
  * @param targetVectors 目标向量集合（包含打包向量）
@@ -637,3 +621,9 @@ export function computeBatchFourBitSimilarityScores(
   
   return scores;
 } 
+
+
+
+
+
+export {computeBatchFourBitDotProductDirectPacked} from './utils/computeBatchFourBitDotProductDirectPacked'
