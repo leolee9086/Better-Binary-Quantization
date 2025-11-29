@@ -10,7 +10,7 @@ export class WasmProvider {
      * 初始化WASM模块
      * @param wasmUrlOrBuffer 可选的WASM文件URL或Buffer。如果在Node环境，可能需要传入Buffer。
      */
-    public static async init(wasmUrlOrBuffer?: string | Request | Response | BufferSource | WebAssembly.Module): Promise<WasmModule> {
+    public static async init(wasmUrlOrBuffer?: string | Request | Response | ArrayBuffer | ArrayBufferView | WebAssembly.Module): Promise<WasmModule> {
         if (this.instance) {
             return this.instance;
         }
