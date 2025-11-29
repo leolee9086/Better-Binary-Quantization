@@ -1,7 +1,7 @@
 
 /*
- * Optimized 1-bit batch dot product (query unpacked, target packed)
- * @param queryVector 4比特量化查询向量
+ * Optimized 4-bit batch dot product (query unpacked, target packed)
+ * @param queryVector 4比特量化查询向量（未打包格式）
  * @param continuousBuffer 连续打包的1比特目标向量
  * @param numVectors 向量数量
  * @param dimension 向量维度

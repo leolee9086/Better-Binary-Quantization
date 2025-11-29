@@ -64,8 +64,7 @@ describe('Batch Quantized Scores Test', () => {
     const qcDists = computeBatchDotProductOptimized(
       quantizedQuery,
       concatenatedBuffer,
-      targetOrds.length,
-      quantizedVectors.dimension()
+      targetOrds.length
     );
     
     // 批量计算相似性分数

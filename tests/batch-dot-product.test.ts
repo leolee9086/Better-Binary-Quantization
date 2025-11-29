@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { computeQuantizedDotProduct } from '../src/bitwiseDotProduct';
-import { createRandomVector } from '../src/vectorUtils'; // Changed import
+// import { createRandomVector } from '../src/vectorUtils'; // Changed import - Not used in this file
 import { bitCount } from '../src/utils'; // Added bitCount import
 
 // Helper to generate a quantized vector (1-bit)
