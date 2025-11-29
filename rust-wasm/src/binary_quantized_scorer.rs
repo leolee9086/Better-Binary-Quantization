@@ -10,6 +10,7 @@ use crate::optimized_scalar_quantizer::QuantizationResult;
 use crate::bitwise_dot_product::{compute_int1_bit_dot_product, compute_int4_bit_dot_product};
 use crate::batch_dot_product::{
     compute_batch_four_bit_dot_product_direct_packed,
+    compute_batch_one_bit_dot_product_direct_packed,
     create_direct_packed_buffer,
 };
 
@@ -234,7 +235,7 @@ impl BinaryQuantizedScorer {
             // 4位量化：使用批量优化算法
             let packed_vector_size = (dimension + 7) / 8;
             let direct_packed_buffer = create_direct_packed_buffer(target_vectors, target_ords, packed_vector_size);
-            
+             
             let qc_dists = compute_batch_four_bit_dot_product_direct_packed(
                 quantized_query,
                 &direct_packed_buffer,
@@ -259,8 +260,46 @@ impl BinaryQuantizedScorer {
                     index_corrections: index_corrections.clone(),
                 });
             }
+        } else if query_bits == 1 {
+            // 1位量化：需要特殊处理向量格式
+            // 1. 创建打包的查询向量
+            let packed_query_size = (dimension + 7) / 8;
+            let mut packed_query = vec![0u8; packed_query_size];
+            crate::optimized_scalar_quantizer::OptimizedScalarQuantizer::pack_as_binary(
+                quantized_query,
+                &mut packed_query
+            ).map_err(|e| format!("查询向量打包失败: {}", e))?;
+
+            // 2. 创建直接打包的目标向量缓冲区
+            let direct_packed_buffer = create_direct_packed_buffer(target_vectors, target_ords, packed_query_size);
+
+            // 3. 使用批量1位点积计算
+            let qc_dists = compute_batch_one_bit_dot_product_direct_packed(
+                &packed_query,
+                &direct_packed_buffer,
+                target_ords.len(),
+                packed_query_size,
+            );
+
+            for (i, &qc_dist) in qc_dists.iter().enumerate() {
+                let index_corrections = &target_corrections[target_ords[i]];
+                let score = self.compute_one_bit_similarity_score(
+                    qc_dist,
+                    query_corrections,
+                    index_corrections,
+                    dimension,
+                    centroid_dp,
+                );
+
+                results.push(QuantizedScoreResult {
+                    score,
+                    bit_dot_product: qc_dist,
+                    query_corrections: query_corrections.clone(),
+                    index_corrections: index_corrections.clone(),
+                });
+            }
         } else {
-            // 1位量化或其他：回退到逐个计算
+            // 其他位数：回退到逐个计算
             for &target_ord in target_ords {
                 let result = self.compute_quantized_score(
                     quantized_query,

@@ -132,28 +132,45 @@ async function runRustTest(config: TestConfig): Promise<TestResult> {
     const startTime = performance.now();
 
     try {
-        const { WasmProvider, WasmScalarQuantizer, wasm_compute_similarity } = await import('../src/wasm/index.ts');
+        // 使用新的量化索引接口
+        const wasmModule = await import('../wasm-dist/better_binary_quantization.js');
+        
+        // 初始化WASM模块
+        await wasmModule.default();
+        
+        const {
+            WasmQuantizedIndex,
+            WasmQuantizedIndexConfig,
+            wasm_compute_similarity
+        } = wasmModule;
 
-        if (!WasmProvider.isInitialized()) {
-            await WasmProvider.init();
-        }
-
+        // 生成测试向量
         const vectors: Float32Array[] = [];
         for (let i = 0; i < vectorCount; i++) {
             vectors.push(generateRandomVector(dimension));
         }
 
-        const centroid = new Float32Array(dimension);
-        for (let i = 0; i < dimension; i++) {
-            let sum = 0;
-            for (const vec of vectors) {
-                sum += vec[i];
-            }
-            centroid[i] = sum / vectors.length;
-        }
+        // 创建量化索引配置
+        // 修复：当索引使用1位时，查询也应该使用1位以保持向量长度一致
+        // 但是当用户选择4位时，我们需要使用4位查询和1位索引的组合
+        const queryBits = bits; // 使用用户选择的位数
+        const indexConfig = new WasmQuantizedIndexConfig(
+            queryBits, // queryBits
+            1, // indexBits
+            "cosine", // similarityFunction
+            0.1, // lambda
+            5 // iters
+        );
 
-        const quantizer = new WasmScalarQuantizer(0.1, 5, "cosine");
-        const quantizedResults = vectors.map(v => quantizer.scalar_quantize(v, bits, centroid));
+        // 创建量化索引
+        const index = new WasmQuantizedIndex(indexConfig);
+
+        // 构建索引 - 将向量展平为Float32Array
+        const flatVectors = new Float32Array(vectorCount * dimension);
+        for (let i = 0; i < vectorCount; i++) {
+            flatVectors.set(vectors[i], i * dimension);
+        }
+        index.build_index(flatVectors, dimension);
 
         const queryTimes: number[] = [];
         let totalRecall = 0;
@@ -163,56 +180,23 @@ async function runRustTest(config: TestConfig): Promise<TestResult> {
             const query = generateRandomVector(dimension);
             const queryStart = performance.now();
 
-            const quantizedQuery = quantizer.scalar_quantize(query, bits, centroid);
+            // 使用量化索引搜索
+            const quantizedResults = index.search_nearest_neighbors(query, k);
             queryTimes.push(performance.now() - queryStart);
 
-            // 正确的量化向量相似度计算：使用量化后的向量和correction
-            const quantizedScores = quantizedResults.map((qr, idx) => {
-                // 计算量化向量之间的相似度
-                let similarity = 0;
-                if (bits === 1) {
-                    // 对于1位量化，使用汉明距离
-                    let hammingDistance = 0;
-                    for (let j = 0; j < qr.quantizedVector.length; j++) {
-                        if (qr.quantizedVector[j] !== quantizedQuery.quantizedVector[j]) {
-                            hammingDistance++;
-                        }
-                    }
-                    similarity = -hammingDistance; // 距离越小，相似度越高
-                } else {
-                    // 对于4位量化，使用量化值的点积
-                    let dotProduct = 0;
-                    for (let j = 0; j < qr.quantizedVector.length; j++) {
-                        dotProduct += qr.quantizedVector[j] * quantizedQuery.quantizedVector[j];
-                    }
-                    similarity = dotProduct;
-                }
-                
-                // 添加correction的影响
-                similarity += qr.correction * quantizedQuery.correction;
-                
-                return {
-                    idx,
-                    score: similarity
-                };
-            });
-
-            const topKQuantized = quantizedScores
-                .sort((a, b) => b.score - a.score)
-                .slice(0, k)
-                .map(r => r.idx);
+            const quantizedIndices = quantizedResults.map((r: any) => r.index);
 
             // 计算真实的前K个最近邻
             const groundTruth = vectors
                 .map((vec, idx) => ({
                     idx,
-                    score: wasm_compute_similarity(query, vec, "cosine")
+                    score: wasm_compute_similarity(query, vec, "cosine") as number
                 }))
                 .sort((a, b) => b.score - a.score)
                 .slice(0, k)
                 .map(r => r.idx);
 
-            const quantizedSet = new Set(topKQuantized);
+            const quantizedSet = new Set(quantizedIndices);
             const overlap = groundTruth.filter(idx => quantizedSet.has(idx)).length;
             totalRecall += overlap / k;
         }
@@ -368,3 +352,4 @@ document.getElementById('runBoth')!.addEventListener('click', async () => {
 });
 
 console.log('Demo ready. Click a button to start testing!');
+

@@ -14,10 +14,11 @@ use crate::batch_dot_product::{
 };
 use crate::optimized_scalar_quantizer::{OptimizedScalarQuantizer, QuantizationResult};
 use crate::binary_quantized_scorer::BinaryQuantizedScorer;
+use crate::quantized_index::{QuantizedIndex, QuantizedIndexConfig};
 
 /// WASM: 计算向量相似性
 /// 
-/// # 参数
+/// # 参数 
 /// * `a` - Float32Array 向量a
 /// * `b` - Float32Array 向量b
 /// * `similarity_type` - 相似性类型: "euclidean" | "cosine" | "dot_product"
@@ -346,5 +347,188 @@ impl WasmBinaryQuantizedScorer {
         ).map_err(|e| JsValue::from_str(&e))?;
 
         Ok(result.score)
+    }
+}
+
+/// WASM包装类：量化索引配置
+#[wasm_bindgen]
+pub struct WasmQuantizedIndexConfig {
+    query_bits: u8,
+    index_bits: u8,
+    similarity_function: String,
+    lambda: Option<f32>,
+    iters: Option<usize>,
+}
+
+#[wasm_bindgen]
+impl WasmQuantizedIndexConfig {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        query_bits: Option<u8>,
+        index_bits: Option<u8>,
+        similarity_function: Option<String>,
+        lambda: Option<f32>,
+        iters: Option<usize>,
+    ) -> WasmQuantizedIndexConfig {
+        WasmQuantizedIndexConfig {
+            query_bits: query_bits.unwrap_or(4),
+            index_bits: index_bits.unwrap_or(1),
+            similarity_function: similarity_function.unwrap_or_else(|| "cosine".to_string()),
+            lambda,
+            iters,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn query_bits(&self) -> u8 {
+        self.query_bits
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_query_bits(&mut self, value: u8) {
+        self.query_bits = value;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn index_bits(&self) -> u8 {
+        self.index_bits
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_index_bits(&mut self, value: u8) {
+        self.index_bits = value;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn similarity_function(&self) -> String {
+        self.similarity_function.clone()
+    }
+    
+    #[wasm_bindgen(setter)]
+    pub fn set_similarity_function(&mut self, value: String) {
+        self.similarity_function = value;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn lambda(&self) -> Option<f32> {
+        self.lambda
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_lambda(&mut self, value: Option<f32>) {
+        self.lambda = value;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn iters(&self) -> Option<usize> {
+        self.iters
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_iters(&mut self, value: Option<usize>) {
+        self.iters = value;
+    }
+}
+
+/// WASM包装类：查询结果
+#[wasm_bindgen]
+pub struct WasmQueryResult {
+    pub index: usize,
+    pub score: f32,
+}
+
+#[wasm_bindgen]
+impl WasmQueryResult {
+    #[wasm_bindgen(constructor)]
+    pub fn new(index: usize, score: f32) -> WasmQueryResult {
+        WasmQueryResult { index, score }
+    }
+}
+
+/// WASM包装类：量化索引
+#[wasm_bindgen]
+pub struct WasmQuantizedIndex {
+    inner: QuantizedIndex,
+}
+
+#[wasm_bindgen]
+impl WasmQuantizedIndex {
+    /// 创建新的量化索引
+    #[wasm_bindgen(constructor)]
+    pub fn new(config: &WasmQuantizedIndexConfig) -> Result<WasmQuantizedIndex, JsValue> {
+        let similarity_function = match config.similarity_function().to_lowercase().as_str() {
+            "euclidean" => SimilarityFunction::Euclidean,
+            "cosine" => SimilarityFunction::Cosine,
+            "dot_product" | "maximum_inner_product" => SimilarityFunction::MaximumInnerProduct,
+            _ => return Err(JsValue::from_str(&format!("不支持的相似性类型: {}", config.similarity_function()))),
+        };
+
+        let index_config = QuantizedIndexConfig {
+            query_bits: config.query_bits(),
+            index_bits: config.index_bits(),
+            similarity_function,
+            lambda: config.lambda(),
+            iters: config.iters(),
+        };
+
+        let index = QuantizedIndex::new(index_config)
+            .map_err(|e| JsValue::from_str(&e))?;
+        
+        Ok(WasmQuantizedIndex {
+            inner: index,
+        })
+    }
+
+    /// 构建索引
+    pub fn build_index(&mut self, vectors: &[f32], dimension: usize) -> Result<JsValue, JsValue> {
+        // 将扁平的向量数组转换为向量集合
+        if vectors.len() % dimension != 0 {
+            return Err(JsValue::from_str("向量数组长度必须是维度的整数倍"));
+        }
+
+        let vector_count = vectors.len() / dimension;
+        let mut vector_collection = Vec::with_capacity(vector_count);
+
+        for i in 0..vector_count {
+            let start = i * dimension;
+            let end = start + dimension;
+            vector_collection.push(vectors[start..end].to_vec());
+        }
+
+        self.inner.build_index(&vector_collection)
+            .map(|_| JsValue::NULL)
+            .map_err(|e| JsValue::from_str(&e))
+    }
+
+    /// 搜索最近邻
+    pub fn search_nearest_neighbors(&self, query_vector: &[f32], k: usize) -> Result<Vec<JsValue>, JsValue> {
+        let results = self.inner.search_nearest_neighbors(query_vector, k)
+            .map_err(|e| JsValue::from_str(&e))?;
+
+        let js_results: Vec<JsValue> = results.into_iter()
+            .map(|result| {
+                let js_result = WasmQueryResult::new(result.index, result.score);
+                JsValue::from(js_result)
+            })
+            .collect();
+
+        Ok(js_results)
+    }
+
+    /// 获取配置信息
+    pub fn get_config(&self) -> Result<JsValue, JsValue> {
+        let config = self.inner.get_config();
+        let js_config = WasmQuantizedIndexConfig {
+            query_bits: config.query_bits,
+            index_bits: config.index_bits,
+            similarity_function: match config.similarity_function {
+                SimilarityFunction::Euclidean => "euclidean".to_string(),
+                SimilarityFunction::Cosine => "cosine".to_string(),
+                SimilarityFunction::MaximumInnerProduct => "maximum_inner_product".to_string(),
+            },
+            lambda: config.lambda,
+            iters: config.iters,
+        };
+        Ok(JsValue::from(js_config))
     }
 }

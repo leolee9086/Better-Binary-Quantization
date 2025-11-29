@@ -11,6 +11,9 @@ pub mod bitwise_dot_product;
 pub mod batch_dot_product;
 pub mod optimized_scalar_quantizer;
 pub mod binary_quantized_scorer;
+pub mod quantized_index;
+#[cfg(test)]
+pub mod quantized_index_test;
 pub mod wasm_interface;
 
 // 重新导出主要类型和函数
@@ -48,6 +51,13 @@ pub use optimized_scalar_quantizer::{
 pub use binary_quantized_scorer::{
     BinaryQuantizedScorer,
     QuantizedScoreResult,
+};
+pub use quantized_index::{
+    QuantizedIndex,
+    QuantizedIndexConfig,
+    QuantizedVectorValues,
+    QuantizedVectorValuesImpl,
+    QueryResult,
 };
 
 // WASM绑定

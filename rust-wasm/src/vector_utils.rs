@@ -64,6 +64,43 @@ pub fn normalize_vector(vector: &mut [f32]) {
     }
 }
 
+/// 计算向量集合的质心
+///
+/// # 参数
+/// * `vectors` - 向量集合
+///
+/// # 返回
+/// 质心向量
+pub fn compute_centroid(vectors: &[Vec<f32>]) -> Result<Vec<f32>, String> {
+    if vectors.is_empty() {
+        return Err("向量集合不能为空".to_string());
+    }
+
+    let first_vector = &vectors[0];
+    let dimension = first_vector.len();
+    let mut centroid = vec![0.0; dimension];
+
+    // 初始化质心为第一个向量
+    for i in 0..dimension {
+        centroid[i] = first_vector[i];
+    }
+
+    // 从第二个向量开始累加
+    for vector in vectors.iter().skip(1) {
+        for i in 0..dimension {
+            centroid[i] += vector[i];
+        }
+    }
+
+    // 除以向量数量
+    let num_vectors = vectors.len() as f32;
+    for i in 0..dimension {
+        centroid[i] /= num_vectors;
+    }
+
+    Ok(centroid)
+}
+
 /// 计算向量点积
 /// 
 /// # 参数
