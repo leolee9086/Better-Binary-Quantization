@@ -36,6 +36,9 @@ export * from './vectorSimilarity';
 export * from './vectorUtils';
 export * from './bitwiseDotProduct';
 
+// WASM 模块
+export * as wasm from './wasm';
+
 // 本地导入用于函数内部使用
 import { BinaryQuantizationFormat } from './binaryQuantizationFormat';
 import { VectorSimilarityFunction } from './types';
