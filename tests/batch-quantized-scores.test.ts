@@ -66,7 +66,7 @@ describe('Batch Quantized Scores Test', () => {
       concatenatedBuffer,
       targetOrds.length
     );
-    
+
     // 批量计算相似性分数
     const scores = computeBatchOneBitSimilarityScores(
       qcDists,
@@ -77,7 +77,7 @@ describe('Batch Quantized Scores Test', () => {
       quantizedVectors.getCentroidDP(), // 1位量化不需要传递原始查询向量
       scorer.getSimilarityFunction()
     );
-    
+
     // 构建结果数组
     const batchResults: QuantizedScoreResult[] = [];
     for (let i = 0; i < targetOrds.length; i++) {
@@ -143,7 +143,7 @@ describe('Batch Quantized Scores Test', () => {
 
     // 验证结果一致性
     expect(consistencyCount).toBe(checkCount);
-    
+
     // 验证点积计算的一致性
     let dotProductConsistencyCount = 0;
     for (let i = 0; i < checkCount; i++) {
@@ -160,7 +160,7 @@ describe('Batch Quantized Scores Test', () => {
     console.log(`  八路循环展开开销: ${(batchTime / NUM_VECTORS).toFixed(6)}ms/向量`);
     console.log(`  真正原始算法开销: ${(trueOriginalTime / NUM_VECTORS).toFixed(6)}ms/向量`);
     console.log(`  单个计算开销: ${(singleTime / NUM_VECTORS).toFixed(6)}ms/向量`);
-    
+
     // 验证结果结构
 
     // 验证结果结构
@@ -216,7 +216,9 @@ describe('Batch Quantized Scores Test', () => {
     const targetOrds = Array.from({ length: 100 }, (_, i) => i);
 
     // 预创建连接缓冲区（一次性操作，不计入算法时间）
-    const concatenatedBuffer = createDirectPackedBuffer(quantizedVectors4bit, targetOrds,quantizedQuery.length);
+    // 注意：1bit索引向量是打包格式，每8个bit打包成1个byte
+    const packedVectorSize = Math.ceil(DIMENSION / 8);
+    const concatenatedBuffer = createDirectPackedBuffer(quantizedVectors4bit, targetOrds, packedVectorSize);
 
     // 测试4位量化的批量计算
     const startTime = performance.now();
@@ -226,18 +228,18 @@ describe('Batch Quantized Scores Test', () => {
       targetOrds.length,
       quantizedVectors4bit.dimension()
     );
-    
-         // 批量计算相似性分数
-     const scores = computeBatchFourBitSimilarityScores(
-       qcDists,
-       queryCorrections,
-       quantizedVectors4bit,
-       targetOrds,
-       quantizedVectors4bit.dimension(),
-       quantizedVectors4bit.getCentroidDP(queryVector), // 传递原始查询向量
-       scorer4bit.getSimilarityFunction()
-     );
-    
+
+    // 批量计算相似性分数
+    const scores = computeBatchFourBitSimilarityScores(
+      qcDists,
+      queryCorrections,
+      quantizedVectors4bit,
+      targetOrds,
+      quantizedVectors4bit.dimension(),
+      quantizedVectors4bit.getCentroidDP(queryVector), // 传递原始查询向量
+      scorer4bit.getSimilarityFunction()
+    );
+
     // 构建结果数组
     const batchResults: QuantizedScoreResult[] = [];
     for (let i = 0; i < targetOrds.length; i++) {
@@ -254,20 +256,20 @@ describe('Batch Quantized Scores Test', () => {
     const endTime = performance.now();
     const batchTime = endTime - startTime;
 
-         // 测试单个计算（用于对比）
-     const startTimeSingle = performance.now();
-     const singleResults = [];
-     for (const targetOrd of targetOrds) {
-       const result = scorer4bit.computeQuantizedScore(
-         quantizedQuery,
-         queryCorrections,
-         quantizedVectors4bit,
-         targetOrd,
-         4,
-         queryVector // 传递原始查询向量
-       );
-       singleResults.push(result);
-     }
+    // 测试单个计算（用于对比）
+    const startTimeSingle = performance.now();
+    const singleResults = [];
+    for (const targetOrd of targetOrds) {
+      const result = scorer4bit.computeQuantizedScore(
+        quantizedQuery,
+        queryCorrections,
+        quantizedVectors4bit,
+        targetOrd,
+        4,
+        queryVector // 传递原始查询向量
+      );
+      singleResults.push(result);
+    }
     const endTimeSingle = performance.now();
     const singleTime = endTimeSingle - startTimeSingle;
 
@@ -290,7 +292,7 @@ describe('Batch Quantized Scores Test', () => {
     expect(batchResults.length).toBe(100);
     expect(singleResults.length).toBe(100);
     expect(consistencyCount).toBe(checkCount);
-    
+
     for (const result of batchResults) {
       expect(result).toHaveProperty('score');
       expect(result).toHaveProperty('bitDotProduct');

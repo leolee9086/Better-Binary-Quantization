@@ -326,7 +326,7 @@ export class BinaryQuantizedScorer {
     // 批量计算（1位和4位量化）
     try {
       let qcDists: number[];
-      
+
       if (queryBits === 1) {
         // 1位量化：使用直接打包算法
         // 1. 创建打包的查询向量
@@ -346,7 +346,9 @@ export class BinaryQuantizedScorer {
       } else {
         // 4位量化：使用正确的直接打包算法
         // 1. 创建直接打包的目标向量缓冲区
-        const directPackedBuffer = createDirectPackedBuffer(targetVectors, targetOrds, quantizedQuery.length);
+        // 注意：1bit索引向量是打包格式，每8个bit打包成1个byte
+        const packedVectorSize = Math.ceil(targetVectors.dimension() / 8);
+        const directPackedBuffer = createDirectPackedBuffer(targetVectors, targetOrds, packedVectorSize);
 
         // 2. 使用直接打包算法进行批量点积计算
         qcDists = computeBatchFourBitDotProductDirectPacked(
