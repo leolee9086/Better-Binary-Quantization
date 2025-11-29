@@ -23,7 +23,6 @@ export function computeBatchDotProductDirectPacked(
   queryVector: Uint8Array,
   continuousBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const queryLength = queryVector.length;
@@ -63,7 +62,6 @@ export function computeBatchDotProductUltraVectorized(
   queryVector: Uint8Array,
   concatenatedBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const bytesPerVector = queryVector.length;
@@ -129,7 +127,6 @@ export function computeBatchFourBitDotProductUltraVectorized(
   queryVector: Uint8Array,
   concatenatedBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const bytesPerVector = queryVector.length;
@@ -195,7 +192,6 @@ export function computeBatchDotProductOptimized(
   queryVector: Uint8Array,
   concatenatedBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const bytesPerVector = queryVector.length;
@@ -266,7 +262,6 @@ export function computeBatchFourBitDotProductOptimized(
   queryVector: Uint8Array,
   concatenatedBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const bytesPerVector = queryVector.length;
@@ -358,7 +353,6 @@ export function computeBatchDotProductOriginal(
   queryVector: Uint8Array,
   concatenatedBuffer: Uint8Array,
   numVectors: number,
-  dimension: number
 ): number[] {
   const results: number[] = new Array(numVectors).fill(0);
   const bytesPerVector = queryVector.length;

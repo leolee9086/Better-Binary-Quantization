@@ -17,9 +17,6 @@ import {
 } from './bitwiseDotProduct';
 import { computeSimilarity } from './vectorSimilarity';
 import {
-  computeBatchDotProductOptimized,
-  computeBatchFourBitDotProductOptimized,
-  createConcatenatedBuffer,
   createDirectPackedBuffer,
   computeBatchDotProductDirectPacked,
   computeBatchFourBitDotProductDirectPacked,
@@ -345,7 +342,6 @@ export class BinaryQuantizedScorer {
           packedQuantizedQuery,
           directPackedBuffer,
           targetOrds.length,
-          targetVectors.dimension()
         );
       } else {
         // 4位量化：使用正确的直接打包算法

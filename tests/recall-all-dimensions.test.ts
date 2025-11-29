@@ -24,7 +24,9 @@ describe('全维度召回率测试', () => {
 
   // 测试每个维度
   for (const [dimensionKey, config] of Object.entries(RECALL_TEST_CONFIGS)) {
-    const { baseVectors, queryVectors } = datasets[dimensionKey];
+    const dataset = datasets[dimensionKey];
+    if (!dataset) continue;
+    const { baseVectors, queryVectors } = dataset;
     
     describe(`${dimensionKey}维度测试`, () => {
       it('数据集验证', () => {
@@ -93,7 +95,9 @@ describe('全维度召回率测试', () => {
       const results: Record<string, number> = {};
       
       for (const [dimensionKey, config] of Object.entries(RECALL_TEST_CONFIGS)) {
-        const { baseVectors, queryVectors } = datasets[dimensionKey];
+        const dataset = datasets[dimensionKey];
+        if (!dataset) continue;
+        const { baseVectors, queryVectors } = dataset;
         const avgRecall = executeRecallTest(
           config,
           4, // queryBits
@@ -115,10 +119,15 @@ describe('全维度召回率测试', () => {
       // 验证召回率随维度增加而降低的趋势
       const dimensions = Object.keys(results).sort();
       for (let i = 1; i < dimensions.length; i++) {
-        const prevRecall = results[dimensions[i - 1]];
-        const currRecall = results[dimensions[i]];
-        // 高维度召回率应该低于或等于低维度（考虑到随机性，允许相等）
-        expect(currRecall).toBeLessThanOrEqual(prevRecall + 0.1); // 允许10%的容差
+        const prevDimension = dimensions[i - 1];
+        const currDimension = dimensions[i];
+        if (!prevDimension || !currDimension) continue;
+        const prevRecall = results[prevDimension];
+        const currRecall = results[currDimension];
+        if (prevRecall !== undefined && currRecall !== undefined) {
+          // 高维度召回率应该低于或等于低维度（考虑到随机性，允许相等）
+          expect(currRecall).toBeLessThanOrEqual(prevRecall + 0.1); // 允许10%的容差
+        }
       }
     });
 
@@ -126,7 +135,9 @@ describe('全维度召回率测试', () => {
       const results: Record<string, number> = {};
       
       for (const [dimensionKey, config] of Object.entries(RECALL_TEST_CONFIGS)) {
-        const { baseVectors, queryVectors } = datasets[dimensionKey];
+        const dataset = datasets[dimensionKey];
+        if (!dataset) continue;
+        const { baseVectors, queryVectors } = dataset;
         const avgRecall = executeOversampledRecallTest(
           config,
           baseVectors,
@@ -145,7 +156,9 @@ describe('全维度召回率测试', () => {
       
       // 验证超采样能提高召回率
       for (const [dimensionKey, config] of Object.entries(RECALL_TEST_CONFIGS)) {
-        const { baseVectors, queryVectors } = datasets[dimensionKey];
+        const dataset = datasets[dimensionKey];
+        if (!dataset) continue;
+        const { baseVectors, queryVectors } = dataset;
         const normalRecall = executeRecallTest(
           config,
           4, // queryBits

@@ -1,13 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { computeQuantizedDotProduct } from '../src/bitwiseDotProduct';
-import { BinaryQuantizationFormat } from '../src/binaryQuantizationFormat';
-import type { BinaryQuantizationConfig } from '../src/types';
 import { createRandomVector } from '../src/vectorUtils'; // Changed import
 import { bitCount } from '../src/utils'; // Added bitCount import
 
 // Helper to generate a quantized vector (1-bit)
 function generate1BitQuantizedVector(dimension: number): Uint8Array {
-  const floatVector = createRandomVector(dimension); // Changed function name
   const quantized = new Uint8Array(dimension / 8); // 1-bit per element, 8 elements per byte
   for (let i = 0; i < dimension / 8; i++) {
     quantized[i] = Math.floor(Math.random() * 256); // Random byte for 8 random bits
@@ -124,7 +121,6 @@ describe('Batch Dot Product Performance Test', () => {
 
   it('should perform batched 1-bit dot product efficiently', () => {
     // Step 2: Use each bit from query vector to traverse the huge array
-    const queryUnpacked = unpack1BitVector(queryVector, DIMENSION);
     let results: number[] = new Array(NUM_VECTORS).fill(0);
 
     const startTime = performance.now();
@@ -185,7 +181,7 @@ Batch 1-bit Dot Product Calculation Time for ${NUM_VECTORS} vectors: ${batchTime
       // If computeQuantizedDotProduct expects unpacked 0/1:
       const unpackedQuery = unpack1BitVector(queryVector, DIMENSION);
       const unpackedTarget = unpack1BitVector(allPackedVectors[i]!, DIMENSION);
-      const expectedScore = computeQuantizedDotProduct(unpackedQuery, unpackedTarget); // This will sum 0s and 1s
+      computeQuantizedDotProduct(unpackedQuery, unpackedTarget); // This will sum 0s and 1s
 
       // Our batch method sums based on bitwise AND.
       // Let's create a bitwise dot product for comparison.

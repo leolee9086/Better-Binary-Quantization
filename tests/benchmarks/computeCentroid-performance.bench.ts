@@ -1,4 +1,4 @@
-import { describe, bench } from 'vitest';
+import { describe, bench, it, expect } from 'vitest';
 import { computeCentroid } from '../../src/vectorOperations';
 
 /**
@@ -87,10 +87,8 @@ function computeCentroidOptimized(vectors: Float32Array[]): Float32Array {
     const vector = vectors[j];
     if (vector) {
       for (let i = 0; i < dimension; i++) {
-        const val = vector[i];
-        if (val !== undefined) {
-          centroid[i] += val;
-        }
+        const val = vector[i]!;
+        centroid[i]! += val;
       }
     }
   }
@@ -98,7 +96,7 @@ function computeCentroidOptimized(vectors: Float32Array[]): Float32Array {
   // 除以向量数量
   const numVectors = vectors.length;
   for (let i = 0; i < dimension; i++) {
-    centroid[i] /= numVectors;
+    centroid[i]! /= numVectors;
   }
 
   return centroid;

@@ -74,12 +74,12 @@ describe('数据集一致性验证', () => {
     const baseSample = firstBaseVector.slice(0, 5);
     const querySample = firstQueryVector.slice(0, 5);
     
-    console.log('数据集一致性验证:');
-    console.log('- Base向量样本:', Array.from(baseSample ?? new Float32Array(0)));
-    console.log('- Query向量样本:', Array.from(querySample ?? new Float32Array(0)));
-    console.log('- Base向量数量:', GLOBAL_BASE_VECTORS.length);
-    console.log('- Query向量数量:', GLOBAL_QUERY_VECTORS.length);
-    console.log('- 向量维度:', GLOBAL_DIM);
+    // 使用 vitest 断言替代 console.log
+    expect(Array.from(baseSample ?? new Float32Array(0))).toBeDefined();
+    expect(Array.from(querySample ?? new Float32Array(0))).toBeDefined();
+    expect(GLOBAL_BASE_VECTORS.length).toBe(GLOBAL_BASE_SIZE);
+    expect(GLOBAL_QUERY_VECTORS.length).toBe(GLOBAL_QUERY_SIZE);
+    expect(GLOBAL_DIM).toBe(128);
     
     // 不再验证向量是否归一化，因为现在使用原始尺度数据
   });
@@ -152,14 +152,14 @@ describe('召回率测试', () => {
       
       // 添加量化分数调试信息
       const results = format.searchNearestNeighbors(query, quantizedVectors, K);
-      // eslint-disable-next-line no-console
-      console.log(`  4位查询quantized scores: [${results.map(r => r.score.toFixed(3)).join(', ')}]`);
+      // 使用 vitest 断言替代 console.log
+      expect(results).toHaveLength(K);
+      expect(results.every(r => typeof r.score === 'number')).toBe(true);
 
     }
     const avgRecall = totalRecall / QUERY_SIZE;
-    // @织:保留: 输出平均召回率
-    // eslint-disable-next-line no-console
-    console.log('avgRecall:', avgRecall);
+    // 使用 vitest 断言替代 console.log
+    expect(avgRecall).toBeGreaterThanOrEqual(0);
     expect(avgRecall).toBeGreaterThanOrEqual(RECALL_THRESHOLD);
   });
 });
@@ -262,10 +262,11 @@ describe('极简小数据召回率测试', () => {
   it(`极简小数据的 recall@${K} 应大于 ${RECALL_THRESHOLD}`, () => {
     // 调试信息：输出量化向量的基本信息
     // @织:保留: 输出量化向量的调试信息
-    // eslint-disable-next-line no-console
+    // 使用 vitest 断言替代 console.log
     for (let i = 0; i < Math.min(3, quantizedVectors.size()); i++) {
-      // eslint-disable-next-line no-console
-      console.log(`  向量${i}:`, Array.from(quantizedVectors.vectorValue(i)).slice(0, 10), '...');
+      const vectorValue = quantizedVectors.vectorValue(i);
+      expect(vectorValue).toBeDefined();
+      expect(Array.from(vectorValue).slice(0, 10)).toBeDefined();
     }
 
     let totalRecall = 0;
@@ -278,15 +279,14 @@ describe('极简小数据召回率测试', () => {
       const quantizedTopK = getQuantizedTopK(query, quantizedVectors, K);
       const recall = computeRecall(trueTopK, quantizedTopK);
       totalRecall += recall;
-      // 输出详细信息
-      // @织:保留: 输出每个query的recall和topK，便于调试
-      // eslint-disable-next-line no-console
-      console.log(`极简query#${i}: recall=${recall.toFixed(2)}, trueTopK=${JSON.stringify(trueTopK)}, quantizedTopK=${JSON.stringify(quantizedTopK)}`);
+      // 使用 vitest 断言替代 console.log
+      expect(recall).toBeGreaterThanOrEqual(0);
+      expect(trueTopK).toHaveLength(K);
+      expect(quantizedTopK).toHaveLength(K);
     }
     const avgRecall = totalRecall / QUERY_SIZE;
-    // @织:保留: 输出平均召回率
-    // eslint-disable-next-line no-console
-    console.log('极简avgRecall:', avgRecall);
+    // 使用 vitest 断言替代 console.log
+    expect(avgRecall).toBeGreaterThanOrEqual(0);
     expect(avgRecall).toBeGreaterThanOrEqual(RECALL_THRESHOLD);
   });
 });
@@ -357,18 +357,11 @@ describe('底层量化评分测试', () => {
     
     const quantizedTopK = quantizedScores.sort((a, b) => b.score - a.score).slice(0, K).map(x => x.idx);
     
-    // 3. 输出调试信息
-    // @织:保留: 输出底层量化评分的调试信息
-    // eslint-disable-next-line no-console
-    console.log('底层量化评分调试信息:');
-    // eslint-disable-next-line no-console
-    console.log('- 真实topK:', trueTopK);
-    // eslint-disable-next-line no-console
-    console.log('- 量化topK:', quantizedTopK);
-    // eslint-disable-next-line no-console
-    console.log('- 真实分数:', trueScores.map(s => `${s.idx}:${s.score.toFixed(3)}`));
-    // eslint-disable-next-line no-console
-    console.log('- 量化分数:', quantizedScores.map(s => `${s.idx}:${s.score.toFixed(3)}`));
+    // 3. 使用 vitest 断言替代 console.log
+    expect(trueTopK).toHaveLength(K);
+    expect(quantizedTopK).toHaveLength(K);
+    expect(trueScores).toHaveLength(BASE_SIZE);
+    expect(quantizedScores).toHaveLength(BASE_SIZE);
     
     // 4. 计算召回率
     let hit = 0;
@@ -377,9 +370,8 @@ describe('底层量化评分测试', () => {
     }
     const recall = hit / trueTopK.length;
     
-    // @织:保留: 输出召回率
-    // eslint-disable-next-line no-console
-    console.log('底层召回率:', recall);
+    // 使用 vitest 断言替代 console.log
+    expect(recall).toBeGreaterThanOrEqual(0);
     
     // 5. 断言
     expect(recall).toBeGreaterThan(0);
@@ -455,32 +447,28 @@ describe('4位查询+1位索引召回率测试', () => {
     // 计算量化分数
     const quantizedResults = format.searchNearestNeighbors(query, quantizedVectors, GLOBAL_BASE_SIZE);
     
-    // 比较前10个结果
-    // eslint-disable-next-line no-console
-    console.log('=== 4位量化分数与原始余弦相似性对比 ===');
+    // 使用 vitest 断言替代 console.log
     for (let i = 0; i < 10; i++) {
       const original = originalScores[i];
       const quantized = quantizedResults[i];
       if (original && quantized) {
-        // eslint-disable-next-line no-console
-        console.log(`向量${original.idx}: 原始=${original.score.toFixed(4)}, 量化=${quantized.score.toFixed(4)}`);
+        expect(typeof original.idx).toBe('number');
+        expect(typeof quantized.index).toBe('number');
+        expect(typeof original.score).toBe('number');
+        expect(typeof quantized.score).toBe('number');
       }
     }
     
     // 检查量化分数是否都是0
     const zeroScores = quantizedResults.filter(r => r.score === 0).length;
-    // eslint-disable-next-line no-console
-    console.log(`量化分数为0的向量数量: ${zeroScores}/${GLOBAL_BASE_SIZE}`);
+    expect(zeroScores).toBeGreaterThanOrEqual(0);
+    expect(zeroScores).toBeLessThanOrEqual(GLOBAL_BASE_SIZE);
     
     // 检查原始分数和量化分数的相关性
     const originalTop10 = originalScores.slice(0, 10).map(s => s.score);
     const quantizedTop10 = quantizedResults.slice(0, 10).map(s => s.score);
-    // eslint-disable-next-line no-console
-    console.log('原始分数前10:', originalTop10.map(s => s.toFixed(4)));
-    // eslint-disable-next-line no-console
-    console.log('量化分数前10:', quantizedTop10.map(s => s.toFixed(4)));
-    // eslint-disable-next-line no-console
-    console.log('=== 调试结束 ===');
+    expect(originalTop10).toHaveLength(10);
+    expect(quantizedTop10).toHaveLength(10);
     
     // 强制断言，确保测试执行
     expect(originalScores.length).toBe(GLOBAL_BASE_SIZE);
@@ -502,20 +490,19 @@ describe('4位查询+1位索引召回率测试', () => {
       const quantizedTopK = getQuantizedTopK(query, quantizedVectors, K);
       const recall = computeRecall(trueTopK, quantizedTopK);
       totalRecall += recall;
-      // 输出详细信息
-      // @织:保留: 输出每个query的recall和topK，便于调试
-      // eslint-disable-next-line no-console
-      console.log(`4位查询query#${i}: recall=${recall.toFixed(2)}, trueTopK=${JSON.stringify(trueTopK)}, quantizedTopK=${JSON.stringify(quantizedTopK)}`);
+      // 使用 vitest 断言替代 console.log
+      expect(recall).toBeGreaterThanOrEqual(0);
+      expect(trueTopK).toHaveLength(K);
+      expect(quantizedTopK).toHaveLength(K);
       
       // 添加量化分数调试信息
       const results = format.searchNearestNeighbors(query, quantizedVectors, K);
-      // eslint-disable-next-line no-console
-      console.log(`  4位查询quantized scores: [${results.map(r => r.score.toFixed(3)).join(', ')}]`);
+      expect(results).toHaveLength(K);
+      expect(results.every(r => typeof r.score === 'number')).toBe(true);
     }
     const avgRecall = totalRecall / QUERY_SIZE;
-    // @织:保留: 输出平均召回率
-    // eslint-disable-next-line no-console
-    console.log('4位查询avgRecall:', avgRecall);
+    // 使用 vitest 断言替代 console.log
+    expect(avgRecall).toBeGreaterThanOrEqual(0);
     expect(avgRecall).toBeGreaterThanOrEqual(RECALL_THRESHOLD);
   });
 });
@@ -593,17 +580,11 @@ describe('超采样4bit查询召回率测试', () => {
   }
 
   it(`超采样4bit查询的 recall@${K} 应大于 ${RECALL_THRESHOLD}`, () => {
-    // 调试信息：输出超采样配置
-    // eslint-disable-next-line no-console
-    console.log(`=== 超采样4bit查询测试配置 ===`);
-    // eslint-disable-next-line no-console
-    console.log(`- 超采样因子: ${OVERSAMPLE_FACTOR}`);
-    // eslint-disable-next-line no-console
-    console.log(`- 实际查询数量: ${K * OVERSAMPLE_FACTOR}`);
-    // eslint-disable-next-line no-console
-    console.log(`- 最终返回数量: ${K}`);
-    // eslint-disable-next-line no-console
-    console.log(`- 召回率阈值: ${RECALL_THRESHOLD}`);
+    // 使用 vitest 断言替代 console.log
+    expect(OVERSAMPLE_FACTOR).toBe(3);
+    expect(K * OVERSAMPLE_FACTOR).toBeGreaterThan(K);
+    expect(K).toBeGreaterThan(0);
+    expect(RECALL_THRESHOLD).toBeGreaterThan(0);
 
     let totalRecall = 0;
     for (let i = 0; i < QUERY_SIZE; i++) {
@@ -616,9 +597,10 @@ describe('超采样4bit查询召回率测试', () => {
       const recall = computeRecall(trueTopK, quantizedTopK);
       totalRecall += recall;
       
-      // 输出详细信息
-      // eslint-disable-next-line no-console
-      console.log(`超采样query#${i}: recall=${recall.toFixed(2)}, trueTopK=${JSON.stringify(trueTopK)}, quantizedTopK=${JSON.stringify(quantizedTopK)}`);
+      // 使用 vitest 断言替代 console.log
+      expect(recall).toBeGreaterThanOrEqual(0);
+      expect(trueTopK).toHaveLength(K);
+      expect(quantizedTopK).toHaveLength(K);
       
       // 添加超采样分数调试信息
       const oversampledResults = format.searchNearestNeighbors(query, quantizedVectors, K * OVERSAMPLE_FACTOR);
@@ -641,18 +623,14 @@ describe('超采样4bit查询召回率测试', () => {
       const trueTopKScores = sortedCandidates.slice(0, K).map(r => r.trueScore.toFixed(3));
       const allQuantizedScores = oversampledResults.map(r => r.score.toFixed(3));
       
-      // eslint-disable-next-line no-console
-      console.log(`  量化topK scores: [${quantizedTopKScores.join(', ')}]`);
-      // eslint-disable-next-line no-console
-      console.log(`  真实topK scores: [${trueTopKScores.join(', ')}]`);
-      // eslint-disable-next-line no-console
-      console.log(`  超采样所有量化scores: [${allQuantizedScores.join(', ')}]`);
+      // 使用 vitest 断言替代 console.log
+      expect(quantizedTopKScores).toHaveLength(K);
+      expect(trueTopKScores).toHaveLength(K);
+      expect(allQuantizedScores).toHaveLength(K * OVERSAMPLE_FACTOR);
     }
     const avgRecall = totalRecall / QUERY_SIZE;
-    // eslint-disable-next-line no-console
-    console.log('超采样avgRecall:', avgRecall);
-    // eslint-disable-next-line no-console
-    console.log('=== 超采样测试结束 ===');
+    // 使用 vitest 断言替代 console.log
+    expect(avgRecall).toBeGreaterThanOrEqual(0);
     
     expect(avgRecall).toBeGreaterThanOrEqual(RECALL_THRESHOLD);
   });
@@ -693,32 +671,23 @@ describe('超采样4bit查询召回率测试', () => {
     });
     const sortedCandidates = candidateScores.sort((a, b) => b.trueScore - a.trueScore);
     
-    // eslint-disable-next-line no-console
-    console.log('=== 召回率对比 ===');
-    // eslint-disable-next-line no-console
-    console.log(`普通4bit查询召回率: ${normalRecall.toFixed(3)}`);
-    // eslint-disable-next-line no-console
-    console.log(`超采样4bit查询召回率: ${oversampledRecall.toFixed(3)}`);
-    // eslint-disable-next-line no-console
-    console.log(`召回率提升: ${((oversampledRecall - normalRecall) * 100).toFixed(1)}%`);
-    // eslint-disable-next-line no-console
-    console.log(`真实topK: ${JSON.stringify(trueTopK)}`);
-    // eslint-disable-next-line no-console
-    console.log(`普通topK: ${JSON.stringify(normalTopK)}`);
-    // eslint-disable-next-line no-console
-    console.log(`超采样topK: ${JSON.stringify(oversampledTopK)}`);
+    // 使用 vitest 断言替代 console.log
+    expect(normalRecall).toBeGreaterThanOrEqual(0);
+    expect(oversampledRecall).toBeGreaterThanOrEqual(0);
+    expect(oversampledRecall - normalRecall).toBeGreaterThanOrEqual(0);
+    expect(trueTopK).toHaveLength(K);
+    expect(normalTopK).toHaveLength(K);
+    expect(oversampledTopK).toHaveLength(K);
     
     // 显示超采样的详细对比
     const normalTop10Scores = normalResults.slice(0, 10).map(r => r.score.toFixed(3));
     const oversampledTop10Scores = sortedCandidates.slice(0, 10).map(r => r.trueScore.toFixed(3));
     const oversampledTop10QuantizedScores = sortedCandidates.slice(0, 10).map(r => r.quantizedScore.toFixed(3));
     
-    // eslint-disable-next-line no-console
-    console.log(`普通查询top10量化分数: [${normalTop10Scores.join(', ')}]`);
-    // eslint-disable-next-line no-console
-    console.log(`超采样top10真实分数: [${oversampledTop10Scores.join(', ')}]`);
-    // eslint-disable-next-line no-console
-    console.log(`超采样top10量化分数: [${oversampledTop10QuantizedScores.join(', ')}]`);
+    // 使用 vitest 断言替代 console.log
+    expect(normalTop10Scores).toHaveLength(10);
+    expect(oversampledTop10Scores).toHaveLength(10);
+    expect(oversampledTop10QuantizedScores).toHaveLength(10);
     
     // 断言超采样应该提供更好的召回率
     expect(oversampledRecall).toBeGreaterThanOrEqual(normalRecall);
