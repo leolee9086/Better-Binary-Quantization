@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Better Binary Quantization - Memory Usage Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-ts {
+            background: linear-gradient(135deg, #3178c6 0%, #235a97 100%);
+            color: white;
+        }
+
+        .btn-rust {
+            background: linear-gradient(135deg, #f74c00 0%, #ce3f02 100%);
+            color: white;
+        }
+
+        .btn-both {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .result-card.ts {
+            border-left-color: #3178c6;
+        }
+
+        .result-card.rust {
+            border-left-color: #f74c00;
+        }
+
+        .result-card h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .result-value {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .memory-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Better Binary Quantization<br>Memory Usage Comparison</h1>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">测试配置</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="dimension">向量维度</label>
+                    <input type="number" id="dimension" value="1536" min="128" step="128">
+                </div>
+                <div class="control-group">
+                    <label for="vectorCount">向量数量</label>
+                    <input type="number" id="vectorCount" value="10000" min="100" step="100">
+                </div>
+                <div class="control-group">
+                    <label for="queryCount">查询次数</label>
+                    <input type="number" id="queryCount" value="100" min="1" step="10">
+                </div>
+                <div class="control-group">
+                    <label for="bits">量化位数</label>
+                    <select id="bits">
+                        <option value="1">1-bit</option>
+                        <option value="4" selected>4-bit</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-ts" id="runTS">运行 TypeScript 版本</button>
+                <button class="btn-rust" id="runRust">运行 Rust WASM 版本</button>
+                <button class="btn-both" id="runBoth">同时运行对比</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span>
+                <span>测试运行中...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">测试结果</h2>
+            <div class="results" id="results"></div>
+            <div class="memory-warning" id="memoryWarning" style="display: none;">
+                ⚠️ 注意: 当前浏览器不支持 <code>performance.memory</code> API。内存数据可能不准确。建议使用 Chrome 并开启 --enable-precise-memory-info 标志。
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/main.ts"></script>
+</body>
+</html>

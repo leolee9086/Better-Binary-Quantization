@@ -1,0 +1,370 @@
+// TypeScript implementation
+import { BinaryQuantizationFormat, VectorSimilarityFunction } from '../src/index.ts';
+
+interface TestConfig {
+    dimension: number;
+    vectorCount: number;
+    queryCount: number;
+    bits: 1 | 4;
+}
+
+interface TestResult {
+    name: string;
+    avgTime: number;
+    totalTime: number;
+    memoryBefore: number;
+    memoryAfter: number;
+    memoryDelta: number;
+    vectorsProcessed: number;
+    recallRate?: number;
+}
+
+function generateRandomVector(dimension: number): Float32Array {
+    const vector = new Float32Array(dimension);
+    for (let i = 0; i < dimension; i++) {
+        vector[i] = Math.random() * 2 - 1;
+    }
+    return vector;
+}
+
+function getMemoryUsage(): number {
+    if ('memory' in performance && (performance as any).memory) {
+        return (performance as any).memory.usedJSHeapSize;
+    }
+    return 0;
+}
+
+function showMemoryWarning() {
+    const warning = document.getElementById('memoryWarning');
+    if (warning && getMemoryUsage() === 0) {
+        warning.style.display = 'block';
+    }
+}
+
+function cosineSimilarity(a: Float32Array, b: Float32Array): number {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+        dotProduct += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function runTypeScriptTest(config: TestConfig): Promise<TestResult> {
+    const { dimension, vectorCount, queryCount, bits } = config;
+
+    if ('gc' in globalThis) {
+        (globalThis as any).gc();
+    }
+
+    const memoryBefore = getMemoryUsage();
+    const startTime = performance.now();
+
+    const vectors: Float32Array[] = [];
+    for (let i = 0; i < vectorCount; i++) {
+        vectors.push(generateRandomVector(dimension));
+    }
+
+    const format = new BinaryQuantizationFormat({
+        queryBits: bits,
+        indexBits: 1,
+        quantizer: {
+            similarityFunction: VectorSimilarityFunction.COSINE,
+            lambda: 0.1,
+            iters: 5
+        }
+    });
+
+    const { quantizedVectors } = format.quantizeVectors(vectors);
+
+    const queryTimes: number[] = [];
+    let totalRecall = 0;
+    const k = 10;
+
+    for (let i = 0; i < queryCount; i++) {
+        const query = generateRandomVector(dimension);
+
+        const queryStart = performance.now();
+        const quantizedResults = format.searchNearestNeighbors(query, quantizedVectors, k);
+        queryTimes.push(performance.now() - queryStart);
+
+        const groundTruth = vectors
+            .map((vec, idx) => ({ idx, score: cosineSimilarity(query, vec) }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, k)
+            .map(r => r.idx);
+
+        const quantizedIndices = new Set(quantizedResults.map(r => r.index));
+        const overlap = groundTruth.filter(idx => quantizedIndices.has(idx)).length;
+        totalRecall += overlap / k;
+    }
+
+    const totalTime = performance.now() - startTime;
+    const avgTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
+    const recallRate = (totalRecall / queryCount) * 100;
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const memoryAfter = getMemoryUsage();
+
+    return {
+        name: 'TypeScript',
+        avgTime,
+        totalTime,
+        memoryBefore,
+        memoryAfter,
+        memoryDelta: memoryAfter - memoryBefore,
+        vectorsProcessed: vectorCount,
+        recallRate
+    };
+}
+
+async function runRustTest(config: TestConfig): Promise<TestResult> {
+    const { dimension, vectorCount, queryCount, bits } = config;
+
+    if ('gc' in globalThis) {
+        (globalThis as any).gc();
+    }
+
+    const memoryBefore = getMemoryUsage();
+    const startTime = performance.now();
+
+    try {
+        const { WasmProvider, WasmScalarQuantizer, wasm_compute_similarity } = await import('../src/wasm/index.ts');
+
+        if (!WasmProvider.isInitialized()) {
+            await WasmProvider.init();
+        }
+
+        const vectors: Float32Array[] = [];
+        for (let i = 0; i < vectorCount; i++) {
+            vectors.push(generateRandomVector(dimension));
+        }
+
+        const centroid = new Float32Array(dimension);
+        for (let i = 0; i < dimension; i++) {
+            let sum = 0;
+            for (const vec of vectors) {
+                sum += vec[i];
+            }
+            centroid[i] = sum / vectors.length;
+        }
+
+        const quantizer = new WasmScalarQuantizer(0.1, 5, "cosine");
+        const quantizedResults = vectors.map(v => quantizer.scalar_quantize(v, bits, centroid));
+
+        const queryTimes: number[] = [];
+        let totalRecall = 0;
+        const k = 10;
+
+        for (let i = 0; i < queryCount; i++) {
+            const query = generateRandomVector(dimension);
+            const queryStart = performance.now();
+
+            const quantizedQuery = quantizer.scalar_quantize(query, bits, centroid);
+            queryTimes.push(performance.now() - queryStart);
+
+            // 正确的量化向量相似度计算：使用量化后的向量和correction
+            const quantizedScores = quantizedResults.map((qr, idx) => {
+                // 计算量化向量之间的相似度
+                let similarity = 0;
+                if (bits === 1) {
+                    // 对于1位量化，使用汉明距离
+                    let hammingDistance = 0;
+                    for (let j = 0; j < qr.quantizedVector.length; j++) {
+                        if (qr.quantizedVector[j] !== quantizedQuery.quantizedVector[j]) {
+                            hammingDistance++;
+                        }
+                    }
+                    similarity = -hammingDistance; // 距离越小，相似度越高
+                } else {
+                    // 对于4位量化，使用量化值的点积
+                    let dotProduct = 0;
+                    for (let j = 0; j < qr.quantizedVector.length; j++) {
+                        dotProduct += qr.quantizedVector[j] * quantizedQuery.quantizedVector[j];
+                    }
+                    similarity = dotProduct;
+                }
+                
+                // 添加correction的影响
+                similarity += qr.correction * quantizedQuery.correction;
+                
+                return {
+                    idx,
+                    score: similarity
+                };
+            });
+
+            const topKQuantized = quantizedScores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, k)
+                .map(r => r.idx);
+
+            // 计算真实的前K个最近邻
+            const groundTruth = vectors
+                .map((vec, idx) => ({
+                    idx,
+                    score: wasm_compute_similarity(query, vec, "cosine")
+                }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, k)
+                .map(r => r.idx);
+
+            const quantizedSet = new Set(topKQuantized);
+            const overlap = groundTruth.filter(idx => quantizedSet.has(idx)).length;
+            totalRecall += overlap / k;
+        }
+
+        const totalTime = performance.now() - startTime;
+        const avgTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
+        const recallRate = (totalRecall / queryCount) * 100;
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const memoryAfter = getMemoryUsage();
+
+        return {
+            name: 'Rust WASM',
+            avgTime,
+            totalTime,
+            memoryBefore,
+            memoryAfter,
+            memoryDelta: memoryAfter - memoryBefore,
+            vectorsProcessed: vectorCount,
+            recallRate
+        };
+    } catch (error) {
+        console.error('WASM test error:', error);
+        throw error;
+    }
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return 'N/A';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatTime(ms: number): string {
+    return ms.toFixed(2) + ' ms';
+}
+
+function displayResult(result: TestResult) {
+    const resultsDiv = document.getElementById('results')!;
+    const cardClass = result.name === 'TypeScript' ? 'ts' : 'rust';
+    const card = document.createElement('div');
+    card.className = `result-card ${cardClass}`;
+
+    const recallHtml = result.recallRate !== undefined
+        ? `<div class="result-item">
+      <span class="result-label">召回率 (Recall@10)</span>
+      <span class="result-value">${result.recallRate.toFixed(2)}%</span>
+    </div>`
+        : '';
+
+    card.innerHTML = `
+    <h3>${result.name} 版本</h3>
+    <div class="result-item">
+      <span class="result-label">平均查询时间</span>
+      <span class="result-value">${formatTime(result.avgTime)}</span>
+    </div>
+    <div class="result-item">
+      <span class="result-label">总执行时间</span>
+      <span class="result-value">${formatTime(result.totalTime)}</span>
+    </div>
+    ${recallHtml}
+    <div class="result-item">
+      <span class="result-label">初始内存</span>
+      <span class="result-value">${formatBytes(result.memoryBefore)}</span>
+    </div>
+    <div class="result-item">
+      <span class="result-label">最终内存</span>
+      <span class="result-value">${formatBytes(result.memoryAfter)}</span>
+    </div>
+    <div class="result-item">
+      <span class="result-label">内存增量</span>
+      <span class="result-value">${formatBytes(result.memoryDelta)}</span>
+    </div>
+    <div class="result-item">
+      <span class="result-label">处理向量数</span>
+      <span class="result-value">${result.vectorsProcessed.toLocaleString()}</span>
+    </div>
+  `;
+
+    resultsDiv.appendChild(card);
+}
+
+function getConfig(): TestConfig {
+    return {
+        dimension: parseInt((document.getElementById('dimension') as HTMLInputElement).value),
+        vectorCount: parseInt((document.getElementById('vectorCount') as HTMLInputElement).value),
+        queryCount: parseInt((document.getElementById('queryCount') as HTMLInputElement).value),
+        bits: parseInt((document.getElementById('bits') as HTMLSelectElement).value) as 1 | 4
+    };
+}
+
+function showLoading(show: boolean) {
+    const loading = document.getElementById('loading')!;
+    loading.className = show ? 'loading active' : 'loading';
+}
+
+function clearResults() {
+    document.getElementById('results')!.innerHTML = '';
+}
+
+document.getElementById('runTS')!.addEventListener('click', async () => {
+    clearResults();
+    showLoading(true);
+    try {
+        const result = await runTypeScriptTest(getConfig());
+        displayResult(result);
+        showMemoryWarning();
+    } catch (error) {
+        console.error('TypeScript test failed:', error);
+        alert('TypeScript 测试失败: ' + error);
+    } finally {
+        showLoading(false);
+    }
+});
+
+document.getElementById('runRust')!.addEventListener('click', async () => {
+    clearResults();
+    showLoading(true);
+    try {
+        const result = await runRustTest(getConfig());
+        displayResult(result);
+        showMemoryWarning();
+    } catch (error) {
+        console.error('Rust test failed:', error);
+        alert('Rust 测试失败: ' + error);
+    } finally {
+        showLoading(false);
+    }
+});
+
+document.getElementById('runBoth')!.addEventListener('click', async () => {
+    clearResults();
+    showLoading(true);
+    try {
+        const config = getConfig();
+        const tsResult = await runTypeScriptTest(config);
+        displayResult(tsResult);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const rustResult = await runRustTest(getConfig());
+        displayResult(rustResult);
+
+        showMemoryWarning();
+    } catch (error) {
+        console.error('Comparison test failed:', error);
+        alert('对比测试失败: ' + error);
+    } finally {
+        showLoading(false);
+    }
+});
+
+console.log('Demo ready. Click a button to start testing!');
