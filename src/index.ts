@@ -77,7 +77,7 @@ export function quickQuantize(
       iters: 5
     }
   });
-  
+
   return format.quantizeVectors(vectors);
 }
 
@@ -102,7 +102,7 @@ export function quickSearch(
       iters: 5
     }
   });
-  
+
   const { quantizedVectors } = format.quantizeVectors(targetVectors);
   return format.searchNearestNeighbors(queryVector, quantizedVectors, k);
 }
@@ -126,7 +126,7 @@ export function computeAccuracy(
       iters: 5
     }
   });
-  
+
   return format.computeQuantizationAccuracy(originalVectors, queryVectors);
 }
 
@@ -134,23 +134,3 @@ export function computeAccuracy(
  * 版本信息
  */
 export const VERSION = '1.0.0';
-
-/**
- * 系统信息
- */
-export const SYSTEM_INFO = {
-  name: 'Binary Quantization System',
-  version: VERSION,
-  description: '基于Lucene的二值量化实现',
-  features: [
-    '优化的标量量化器',
-    '位运算优化的向量操作',
-    '二值量化评分器',
-    '完整的二值量化格式',
-    '各向异性损失函数',
-    '坐标下降优化算法',
-    '非对称量化策略',
-    '质心中心化优化',
-    'SIMD友好的位运算优化'
-  ]
-} as const; 

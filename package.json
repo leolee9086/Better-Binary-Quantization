@@ -11,13 +11,11 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:wasm": "cd rust-wasm && wasm-pack build --target web --out-dir ../wasm-dist",
+    "build:all": "pnpm run build:wasm && pnpm run build",
     "dev": "tsc --watch",
-    "test": "vitest --run",
+    "test": "vitest --watch",
     "test:run": "vitest --run",
-    "test:coverage": "vitest --coverage",
-    "test:experimental": "vitest --config vitest.experimental.config.ts --run",
-    "test:experimental:watch": "vitest --config vitest.experimental.config.ts",
-    "exp": "node scripts/run-experimental.js",
     "bench": "vitest bench  --run ",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
@@ -63,4 +61,4 @@
   "publishConfig": {
     "access": "public"
   }
-} 
+}
