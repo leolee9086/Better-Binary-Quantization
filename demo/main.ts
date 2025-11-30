@@ -73,7 +73,7 @@ async function runTypeScriptTest(config: TestConfig): Promise<TestResult> {
         indexBits: 1,
         quantizer: {
             similarityFunction: VectorSimilarityFunction.COSINE,
-            lambda: 0.1,
+            lambda: 0.001,
             iters: 5
         }
     });
