@@ -244,7 +244,7 @@ impl BinaryQuantizedScorer {
             );
 
             for (i, &qc_dist) in qc_dists.iter().enumerate() {
-                let index_corrections = &target_corrections[target_ords[i]];
+                let index_corrections = &target_corrections[i];
                 let score = self.compute_four_bit_similarity_score(
                     qc_dist,
                     query_corrections,
@@ -282,7 +282,7 @@ impl BinaryQuantizedScorer {
             );
 
             for (i, &qc_dist) in qc_dists.iter().enumerate() {
-                let index_corrections = &target_corrections[target_ords[i]];
+                let index_corrections = &target_corrections[i];
                 let score = self.compute_one_bit_similarity_score(
                     qc_dist,
                     query_corrections,
